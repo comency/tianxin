@@ -1,0 +1,31 @@
+# Local development runtimes and downloaded installers
+.local/
+.setup-cache/
+.m2/
+build-local/
+src/main/resources/application-local.yml
+
+# Java and IDE build artifacts
+target/
+!**/src/main/**/target/
+!**/src/test/**/target/
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+.idea/
+*.iws
+*.iml
+*.ipr
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+.vscode/

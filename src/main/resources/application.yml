@@ -1,0 +1,35 @@
+spring:
+  application:
+    name: tianxin-smart-platform
+  data:
+    redis:
+      host: ${TX_REDIS_HOST:127.0.0.1}
+      port: ${TX_REDIS_PORT:6379}
+      timeout: 2s
+
+server:
+  port: ${SERVER_PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+info:
+  app:
+    name: 天信之星防腐保温智慧平台
+    java: 25
+
+tx:
+  platform:
+    version: 0.1.0-SNAPSHOT
+  security:
+    jwt:
+      # Development-only fallback. Production must set TX_JWT_SECRET.
+      secret: ${TX_JWT_SECRET:tianxin-local-development-secret-change-before-production-2026}
+      ttl-seconds: ${TX_JWT_TTL_SECONDS:7200}
