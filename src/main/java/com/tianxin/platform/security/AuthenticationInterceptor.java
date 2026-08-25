@@ -73,6 +73,9 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
         if (path.startsWith("/api/v1/system/audit-logs")) {
             return "sys:audit:read";
         }
+        if (path.startsWith("/api/v1/enterprises")) {
+            return "market:enterprise:read";
+        }
         return null;
     }
 
