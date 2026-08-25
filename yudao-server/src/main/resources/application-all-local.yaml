@@ -1,0 +1,79 @@
+# 文件作用：全模块本地启动配置。
+# 作者：DAMU
+# 创建时间：2026-07-22
+# 核心功能：连接本地 MySQL 和 Redis，并排除未配置外部服务的启动期自动装配。
+server:
+    port: 48080
+
+spring:
+    autoconfigure:
+        exclude:
+            - org.dromara.trans.config.TransServiceConfig
+            - org.jeecg.modules.jmreport.config.init.JimuReportConfiguration
+            - org.springframework.ai.vectorstore.qdrant.autoconfigure.QdrantVectorStoreAutoConfiguration
+            - org.springframework.ai.vectorstore.redis.autoconfigure.RedisVectorStoreAutoConfiguration
+            - org.springframework.ai.vectorstore.milvus.autoconfigure.MilvusVectorStoreAutoConfiguration
+            - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeChatAutoConfiguration
+            - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeAgentAutoConfiguration
+            - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeImageAutoConfiguration
+            - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeVideoAutoConfiguration
+            - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeAudioSpeechAutoConfiguration
+            - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeAudioTranscriptionAutoConfiguration
+            - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeRerankAutoConfiguration
+            - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeEmbeddingAutoConfiguration
+            - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeMultimodalEmbeddingAutoConfiguration
+            - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeAsyncToolCallingManagerAutoConfiguration
+    datasource:
+        dynamic:
+            datasource:
+                master:
+                    url: jdbc:mysql://127.0.0.1:3306/ruoyi-vue-pro?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true&rewriteBatchedStatements=true
+                    username: root
+                    password: ${TX_DB_PASSWORD}
+                tdengine:
+                    lazy: true
+                    url: jdbc:TAOS-WS://127.0.0.1:6041/ruoyi_vue_pro?varcharAsString=true&enableAutoReconnect=true
+                    driver-class-name: com.taosdata.jdbc.ws.WebSocketDriver
+                    username: root
+                    password: taosdata
+                    druid:
+                        validation-query: SELECT SERVER_STATUS()
+    data:
+        redis:
+            host: 127.0.0.1
+            port: ${TX_REDIS_PORT:6380}
+            database: 0
+
+yudao:
+    captcha:
+        # 与前端 .env.local 保持一致，便于本地管理员账号联调。
+        enable: false
+    iot:
+        tdengine:
+            # 使用本机 TDengine 保存 IoT 设备消息与属性时序数据。
+            enabled: false
+    report:
+        jmreport:
+            enabled: false
+    tencent-lbs-key: local-placeholder-key
+    pay:
+        order-notify-url: http://127.0.0.1:48080/admin-api/pay/notify/order
+        refund-notify-url: http://127.0.0.1:48080/admin-api/pay/notify/refund
+    websocket:
+        sender-type: local
+
+wx:
+    mp:
+        app-id: wx0000000000000000
+        secret: 00000000000000000000000000000000
+        config-storage:
+            type: RedisTemplate
+            key-prefix: wx
+            http-client-type: HttpComponents
+    miniapp:
+        appid: wx0000000000000000
+        secret: 00000000000000000000000000000000
+        config-storage:
+            type: RedisTemplate
+            key-prefix: wa
+            http-client-type: HttpComponents
