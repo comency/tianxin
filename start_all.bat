@@ -27,18 +27,36 @@ if not exist "%JAVA_HOME%\bin\java.exe" (
 )
 
 if not exist "%REDIS_SERVER%" (
-    echo [ERROR] Redis server not found: %REDIS_SERVER%
-    exit /b 1
+    where redis-server.exe >nul 2>&1
+    if errorlevel 1 (
+        echo [ERROR] Redis server was not found. Install Redis or place it in runtime\redis.
+        exit /b 1
+    )
+    for /f "delims=" %%I in ('where redis-server.exe') do set "REDIS_SERVER=%%I"
 )
 
 if not exist "%REDIS_CLI%" (
-    echo [ERROR] Redis CLI not found: %REDIS_CLI%
-    exit /b 1
+    where redis-cli.exe >nul 2>&1
+    if errorlevel 1 (
+        echo [ERROR] Redis CLI was not found. Install Redis or place it in runtime\redis.
+        exit /b 1
+    )
+    for /f "delims=" %%I in ('where redis-cli.exe') do set "REDIS_CLI=%%I"
 )
 
 if not exist "%REDIS_CONFIG%" (
-    echo [ERROR] Redis config not found: %REDIS_CONFIG%
-    exit /b 1
+    set "REDIS_START_ARGS=--port %REDIS_PORT%"
+) else (
+    set REDIS_START_ARGS="%REDIS_CONFIG%"
+)
+
+if "%TX_DB_PASSWORD%"=="" (
+    echo [INPUT] Enter the local MySQL root password for ruoyi-vue-pro.
+    set /p "TX_DB_PASSWORD=Password: "
+    if "%TX_DB_PASSWORD%"=="" (
+        echo [ERROR] Database password cannot be empty.
+        exit /b 1
+    )
 )
 
 powershell -NoProfile -Command "$jar = Get-Item '%SERVER_JAR%' -ErrorAction SilentlyContinue; if (-not $jar -or -not (& jar tf '%SERVER_JAR%' | Select-String '^BOOT-INF/' -Quiet)) { exit 0 }; exit 1"
@@ -53,12 +71,23 @@ if not errorlevel 1 (
 )
 
 if not exist "%FRONTEND_DIR%\node_modules" (
-    echo [ERROR] Frontend dependency directory not found: %FRONTEND_DIR%\node_modules
-    echo Run in the frontend directory: pnpm install --frozen-lockfile
-    exit /b 1
+    where pnpm.cmd >nul 2>&1
+    if errorlevel 1 (
+        echo [ERROR] pnpm was not found. Install Node.js and pnpm, then run this script again.
+        exit /b 1
+    )
+    echo [INFO] Installing frontend dependencies for the first run...
+    pushd "%FRONTEND_DIR%"
+    call pnpm.cmd install --frozen-lockfile
+    if errorlevel 1 (
+        popd
+        echo [ERROR] Frontend dependency installation failed.
+        exit /b 1
+    )
+    popd
 )
 
-mysql -uroot -pltr041204 -D ruoyi-vue-pro -N -e "SELECT 1;" >nul 2>&1
+mysql -uroot -p"%TX_DB_PASSWORD%" -D ruoyi-vue-pro -N -e "SELECT 1;" >nul 2>&1
 if errorlevel 1 (
     echo [ERROR] MySQL is unavailable or root cannot access ruoyi-vue-pro.
     exit /b 1
@@ -67,10 +96,10 @@ if errorlevel 1 (
 powershell -NoProfile -Command "if ((& '%REDIS_CLI%' -p %REDIS_PORT% ping) -eq 'PONG') { exit 0 } else { exit 1 }"
 if errorlevel 1 (
     echo [INFO] Starting local Redis on port %REDIS_PORT%...
-    start "RuoYi-Vue-Pro Redis" /B "%REDIS_SERVER%" "%REDIS_CONFIG%"
+    start "RuoYi-Vue-Pro Redis" /B "%REDIS_SERVER%" %REDIS_START_ARGS%
     powershell -NoProfile -Command "$deadline = (Get-Date).AddSeconds(10); do { if ((& '%REDIS_CLI%' -p %REDIS_PORT% ping) -eq 'PONG') { exit 0 }; Start-Sleep -Milliseconds 500 } while ((Get-Date) -lt $deadline); exit 1"
     if errorlevel 1 (
-        echo [ERROR] Redis failed to start. Review runtime\redis\redis-6380.log.
+        echo [ERROR] Redis failed to start. Review the Redis output and port %REDIS_PORT%.
         exit /b 1
     )
 )

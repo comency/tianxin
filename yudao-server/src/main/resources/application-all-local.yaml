@@ -30,8 +30,8 @@ spring:
                 master:
                     url: jdbc:mysql://127.0.0.1:3306/ruoyi-vue-pro?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true&rewriteBatchedStatements=true
                     username: root
-                    # 数据库密码：请根据自己的本地数据库密码修改。
-                    password: "此处应为数据库密码"
+                    # 数据库密码：请设置 TX_DB_PASSWORD 为自己的本地数据库密码。
+                    password: ${TX_DB_PASSWORD}
                 tdengine:
                     lazy: true
                     url: jdbc:TAOS-WS://127.0.0.1:6041/ruoyi_vue_pro?varcharAsString=true&enableAutoReconnect=true
