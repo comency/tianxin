@@ -53,10 +53,11 @@ if not exist "%REDIS_CONFIG%" (
 if "%TX_DB_PASSWORD%"=="" (
     echo [INPUT] Enter the local MySQL root password for ruoyi-vue-pro.
     set /p "TX_DB_PASSWORD=Password: "
-    if "%TX_DB_PASSWORD%"=="" (
-        echo [ERROR] Database password cannot be empty.
-        exit /b 1
-    )
+)
+
+if "%TX_DB_PASSWORD%"=="" (
+    echo [ERROR] Database password cannot be empty.
+    exit /b 1
 )
 
 powershell -NoProfile -Command "$jar = Get-Item '%SERVER_JAR%' -ErrorAction SilentlyContinue; if (-not $jar -or -not (& jar tf '%SERVER_JAR%' | Select-String '^BOOT-INF/' -Quiet)) { exit 0 }; exit 1"
