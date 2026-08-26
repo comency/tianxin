@@ -8,12 +8,15 @@ rem Created: 2026-07-23
 rem Function: validate dependencies, start both services, and verify HTTP endpoints.
 
 set "ROOT=%~dp0"
-set "JAVA_HOME=D:\jdk-25.0.2"
+set "JAVA_HOME=C:\Program Files\Java\jdk-25"
 set "PATH=%JAVA_HOME%\bin;%PATH%"
 set "SERVER_JAR=%ROOT%yudao-server\target\yudao-server.jar"
 set "COMMON_JAR=%ROOT%yudao-framework\yudao-common\target\yudao-common-2026.06-jdk25-SNAPSHOT.jar"
 set "FRONTEND_DIR=%ROOT%yudao-ui\yudao-ui-admin-vue3"
-set "REDIS_CLI=D:\Redis-8.6.3\redis-cli.exe"
+set "REDIS_SERVER=%ROOT%runtime\redis\redis-server.exe"
+set "REDIS_CLI=%ROOT%runtime\redis\redis-cli.exe"
+set "REDIS_CONFIG=%ROOT%runtime\redis\redis-6380.conf"
+set "REDIS_PORT=6380"
 
 echo.
 echo ===== RuoYi-Vue-Pro Full Local Startup =====
@@ -23,15 +26,25 @@ if not exist "%JAVA_HOME%\bin\java.exe" (
     exit /b 1
 )
 
+if not exist "%REDIS_SERVER%" (
+    echo [ERROR] Redis server not found: %REDIS_SERVER%
+    exit /b 1
+)
+
 if not exist "%REDIS_CLI%" (
     echo [ERROR] Redis CLI not found: %REDIS_CLI%
     exit /b 1
 )
 
-powershell -NoProfile -Command "$jar = Get-Item '%SERVER_JAR%' -ErrorAction SilentlyContinue; $commonJar = Get-Item '%COMMON_JAR%' -ErrorAction SilentlyContinue; if (-not $jar -or -not $commonJar -or $commonJar.Length -lt 1000) { exit 0 }; if (-not (& jar tf '%SERVER_JAR%' | Select-String '^BOOT-INF/' -Quiet)) { exit 0 }; $source = & rg --files -g '*.java' -g '*.xml' -g '*.yaml' -g '*.yml' -g '!**/target/**' -g '!**/node_modules/**' '%ROOT%' | ForEach-Object { Get-Item -LiteralPath $_ } | Sort-Object LastWriteTime -Descending | Select-Object -First 1; if ($source -and $source.LastWriteTime -gt $jar.LastWriteTime) { exit 0 }; exit 1"
+if not exist "%REDIS_CONFIG%" (
+    echo [ERROR] Redis config not found: %REDIS_CONFIG%
+    exit /b 1
+)
+
+powershell -NoProfile -Command "$jar = Get-Item '%SERVER_JAR%' -ErrorAction SilentlyContinue; if (-not $jar -or -not (& jar tf '%SERVER_JAR%' | Select-String '^BOOT-INF/' -Quiet)) { exit 0 }; exit 1"
 if not errorlevel 1 (
-    echo [INFO] Backend source changed or Jar is missing; rebuilding all backend modules...
-    powershell -NoProfile -ExecutionPolicy Bypass -Command "$env:JAVA_HOME = '%JAVA_HOME%'; $env:Path = \"$env:JAVA_HOME\bin;$env:Path\"; Set-Location '%ROOT%'; & mvn '-Dmaven.compiler.source=25' '-Dmaven.compiler.target=25' '-Dmaven.compiler.release=25' '-pl' 'yudao-server' '-am' 'clean' 'package' '-Dmaven.test.skip=true'; exit $LASTEXITCODE"
+    echo [INFO] Backend executable Jar is missing; building all backend modules...
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "$env:JAVA_HOME = '%JAVA_HOME%'; $env:Path = \"$env:JAVA_HOME\bin;$env:Path\"; Set-Location '%ROOT%'; & mvn '-Dmaven.compiler.source=25' '-Dmaven.compiler.target=25' '-Dmaven.compiler.release=25' '-pl' 'yudao-server' '-am' 'package' '-Dmaven.test.skip=true'; exit $LASTEXITCODE"
     if errorlevel 1 (
         echo [ERROR] Backend rebuild failed. Review the Maven output above.
         pause
@@ -45,23 +58,30 @@ if not exist "%FRONTEND_DIR%\node_modules" (
     exit /b 1
 )
 
-mysql -uroot -proot -D ruoyi-vue-pro -N -e "SELECT 1;" >nul 2>&1
+mysql -uroot -pltr041204 -D ruoyi-vue-pro -N -e "SELECT 1;" >nul 2>&1
 if errorlevel 1 (
-    echo [ERROR] MySQL is unavailable or root/root cannot access ruoyi-vue-pro.
+    echo [ERROR] MySQL is unavailable or root cannot access ruoyi-vue-pro.
     exit /b 1
 )
 
-powershell -NoProfile -Command "if ((& '%REDIS_CLI%' ping) -eq 'PONG') { exit 0 } else { exit 1 }"
+powershell -NoProfile -Command "if ((& '%REDIS_CLI%' -p %REDIS_PORT% ping) -eq 'PONG') { exit 0 } else { exit 1 }"
 if errorlevel 1 (
-    echo [ERROR] Redis is unavailable or redis-cli is not on PATH.
-    exit /b 1
+    echo [INFO] Starting local Redis on port %REDIS_PORT%...
+    start "RuoYi-Vue-Pro Redis" /B "%REDIS_SERVER%" "%REDIS_CONFIG%"
+    powershell -NoProfile -Command "$deadline = (Get-Date).AddSeconds(10); do { if ((& '%REDIS_CLI%' -p %REDIS_PORT% ping) -eq 'PONG') { exit 0 }; Start-Sleep -Milliseconds 500 } while ((Get-Date) -lt $deadline); exit 1"
+    if errorlevel 1 (
+        echo [ERROR] Redis failed to start. Review runtime\redis\redis-6380.log.
+        exit /b 1
+    )
 )
 
 for /f "tokens=5" %%P in ('netstat -ano ^| findstr /r /c:":48080 .*LISTENING"') do set "BACKEND_PID=%%P"
 if defined BACKEND_PID (
     echo [INFO] Backend port 48080 is used by process %BACKEND_PID%; skipping startup.
 ) else (
-    start "RuoYi-Vue-Pro Backend" /D "%ROOT%" powershell.exe -NoExit -NoProfile -ExecutionPolicy Bypass -Command "& '%JAVA_HOME%\bin\java.exe' -jar '%SERVER_JAR%' '--spring.profiles.active=all-local'"
+    rem Start Java directly in its own console. This avoids PowerShell closing the JVM
+    rem when the launcher window exits after the health checks complete.
+    start "RuoYi-Vue-Pro Backend" /D "%ROOT%" "%JAVA_HOME%\bin\java.exe" -jar "%SERVER_JAR%" "--spring.profiles.active=all-local"
 )
 
 for /f "tokens=5" %%P in ('netstat -ano ^| findstr /r /c:":80 .*LISTENING"') do set "FRONTEND_PID=%%P"

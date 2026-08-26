@@ -2,7 +2,7 @@ package cn.iocoder.yudao.module.im.service.face;
 
 import cn.iocoder.yudao.framework.common.exception.ServiceException;
 import cn.iocoder.yudao.framework.test.core.ut.BaseMockitoUnitTest;
-import cn.iocoder.yudao.module.im.controller.admin.face.vo.useritem.ImFaceUserItemSaveReqVO;
+import cn.iocoder.yudao.module.im.controller.admin.face.vo.userItem.ImFaceUserItemSaveReqVO;
 import cn.iocoder.yudao.module.im.dal.dataobject.face.ImFaceUserItemDO;
 import cn.iocoder.yudao.module.im.dal.mysql.face.ImFaceUserItemMapper;
 import cn.iocoder.yudao.module.im.framework.config.ImProperties;

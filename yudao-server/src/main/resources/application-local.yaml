@@ -22,6 +22,8 @@ spring:
       - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeEmbeddingAutoConfiguration
       - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeMultimodalEmbeddingAutoConfiguration
       - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeAsyncToolCallingManagerAutoConfiguration
+      # 本地未配置 StabilityAI 密钥时，禁止创建其图像模型客户端，避免应用启动失败。
+      - org.springframework.ai.model.stabilityai.autoconfigure.StabilityAiImageAutoConfiguration
   # 数据源配置项
   datasource:
     druid: # Druid 【监控】相关的全局配置

@@ -23,13 +23,15 @@ spring:
             - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeEmbeddingAutoConfiguration
             - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeMultimodalEmbeddingAutoConfiguration
             - com.alibaba.cloud.ai.autoconfigure.dashscope.DashScopeAsyncToolCallingManagerAutoConfiguration
+            - org.springframework.ai.model.stabilityai.autoconfigure.StabilityAiImageAutoConfiguration
     datasource:
         dynamic:
             datasource:
                 master:
                     url: jdbc:mysql://127.0.0.1:3306/ruoyi-vue-pro?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&nullCatalogMeansCurrent=true&rewriteBatchedStatements=true
                     username: root
-                    password: ${TX_DB_PASSWORD}
+                    # 数据库密码：请根据自己的本地数据库密码修改。
+                    password: "此处应为数据库密码"
                 tdengine:
                     lazy: true
                     url: jdbc:TAOS-WS://127.0.0.1:6041/ruoyi_vue_pro?varcharAsString=true&enableAutoReconnect=true
@@ -61,6 +63,14 @@ yudao:
         refund-notify-url: http://127.0.0.1:48080/admin-api/pay/notify/refund
     websocket:
         sender-type: local
+    trade:
+        # 本地开发不接入真实快递平台；非空占位值仅用于通过模块启动校验。
+        express:
+            kd-niao:
+                api-key: local-placeholder
+            kd100:
+                key: local-placeholder
+                customer: local-placeholder
 
 wx:
     mp:
