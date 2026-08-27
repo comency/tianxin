@@ -21,6 +21,10 @@ public class ProductSpuRespVO {
     @ExcelProperty("商品编号")
     private Long id;
 
+    @Schema(description = "所属企业店铺编号；为空表示平台自营商品", example = "1")
+    @ExcelProperty("所属店铺编号")
+    private Long shopId;
+
     @Schema(description = "商品名称", requiredMode = Schema.RequiredMode.REQUIRED, example = "清凉小短袖")
     @ExcelProperty("商品名称")
     private String name;

@@ -36,6 +36,12 @@
       </el-select>
       <el-button :icon="RefreshRight" @click="refreshBrandList" class="ml-1" size="small" />
     </el-form-item>
+    <el-form-item label="所属店铺" prop="shopId">
+      <el-select v-model="formData.shopId" class="w-80!" clearable placeholder="不选择则为平台自营">
+        <el-option v-for="item in shopList" :key="item.id" :label="item.name" :value="item.id as number" />
+      </el-select>
+      <el-button :icon="RefreshRight" @click="refreshShopList" class="ml-1" size="small" />
+    </el-form-item>
     <el-form-item label="商品关键字" prop="keyword">
       <el-input v-model="formData.keyword" class="w-80!" placeholder="请输入商品关键字" />
     </el-form-item>
@@ -69,6 +75,7 @@ import * as ProductCategoryApi from '@/api/mall/product/category'
 import { CategoryVO } from '@/api/mall/product/category'
 import * as ProductBrandApi from '@/api/mall/product/brand'
 import { BrandVO } from '@/api/mall/product/brand'
+import * as ProductShopApi from '@/api/mall/product/shop'
 import { RefreshRight } from '@element-plus/icons-vue'
 
 defineOptions({ name: 'ProductSpuInfoForm' })
@@ -90,7 +97,8 @@ const formData = reactive<Spu>({
   picUrl: '', // 商品封面图
   sliderPicUrls: [], // 商品轮播图
   introduction: '', // 商品简介
-  brandId: undefined // 商品品牌
+  brandId: undefined, // 商品品牌
+  shopId: undefined // 所属企业店铺
 })
 const sliderPicUrls = computed({
   get: () => formData.sliderPicUrls || [],
@@ -140,6 +148,7 @@ defineExpose({ validate })
 
 /** 初始化 */
 const brandList = ref<BrandVO[]>([]) // 商品品牌列表
+const shopList = ref<ProductShopApi.ShopVO[]>([]) // 企业店铺列表
 const categoryList = ref<CategoryVO[]>([]) // 商品分类树
 async function refreshCategoryList() {
   // 获得分类树
@@ -151,9 +160,15 @@ async function refreshBrandList() {
   brandList.value = await ProductBrandApi.getSimpleBrandList()
 }
 
+async function refreshShopList() {
+  const shops = await ProductShopApi.getShopList()
+  shopList.value = shops.filter((shop) => shop.status === 0)
+}
+
 onMounted(async () => {
   await refreshCategoryList()
   // 获取商品品牌列表
   await refreshBrandList()
+  await refreshShopList()
 })
 </script>

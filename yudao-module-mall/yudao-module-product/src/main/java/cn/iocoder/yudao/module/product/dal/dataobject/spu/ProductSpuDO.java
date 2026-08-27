@@ -36,6 +36,11 @@ public class ProductSpuDO extends BaseDO {
     @TableId
     private Long id;
 
+    /**
+     * 所属店铺编号；平台自营商品使用平台默认店铺
+     */
+    private Long shopId;
+
     // ========== 基本信息 =========
 
     /**

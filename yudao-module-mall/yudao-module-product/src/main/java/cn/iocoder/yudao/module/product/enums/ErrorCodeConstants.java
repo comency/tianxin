@@ -9,6 +9,11 @@ import cn.iocoder.yudao.framework.common.exception.ErrorCode;
  */
 public interface ErrorCodeConstants {
 
+    // ========== 产业链店铺 1-008-009-000 ============
+    ErrorCode SHOP_NOT_EXISTS = new ErrorCode(1_008_009_000, "店铺不存在");
+    ErrorCode SHOP_ENTERPRISE_EXISTS = new ErrorCode(1_008_009_001, "该企业已开通店铺");
+    ErrorCode SHOP_DISABLED = new ErrorCode(1_008_009_002, "店铺已停用");
+
     // ========== 商品分类相关 1-008-001-000 ============
     ErrorCode CATEGORY_NOT_EXISTS = new ErrorCode(1_008_001_000, "商品分类不存在");
     ErrorCode CATEGORY_PARENT_NOT_EXISTS = new ErrorCode(1_008_001_001, "父分类不存在");

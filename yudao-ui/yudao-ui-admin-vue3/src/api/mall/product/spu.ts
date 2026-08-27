@@ -32,6 +32,7 @@ export interface GiveCouponTemplate {
 
 export interface Spu {
   id?: number
+  shopId?: number // 所属企业店铺；为空时表示平台自营
   name?: string // 商品名称
   categoryId?: number // 商品分类
   keyword?: string // 关键字

@@ -71,7 +71,8 @@ public interface ProductSpuMapper extends BaseMapperX<ProductSpuDO> {
                 // 关键字匹配，目前只匹配商品名
                 .likeIfPresent(ProductSpuDO::getName, pageReqVO.getKeyword())
                 // 分类
-                .inIfPresent(ProductSpuDO::getCategoryId, categoryIds);
+                .inIfPresent(ProductSpuDO::getCategoryId, categoryIds)
+                .eqIfPresent(ProductSpuDO::getShopId, pageReqVO.getShopId());
         // 上架状态 且有库存
         query.eq(ProductSpuDO::getStatus, ProductSpuStatusEnum.ENABLE.getStatus());
 

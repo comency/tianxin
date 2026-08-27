@@ -19,6 +19,7 @@ import cn.iocoder.yudao.module.product.enums.spu.ProductSpuStatusEnum;
 import cn.iocoder.yudao.module.product.service.brand.ProductBrandService;
 import cn.iocoder.yudao.module.product.service.category.ProductCategoryService;
 import cn.iocoder.yudao.module.product.service.sku.ProductSkuService;
+import cn.iocoder.yudao.module.product.service.shop.ProductShopService;
 import com.google.common.collect.Maps;
 import jakarta.annotation.Resource;
 import org.springframework.context.annotation.Lazy;
@@ -52,6 +53,8 @@ public class ProductSpuServiceImpl implements ProductSpuService {
     private ProductBrandService brandService;
     @Resource
     private ProductCategoryService categoryService;
+    @Resource
+    private ProductShopService shopService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -59,6 +62,7 @@ public class ProductSpuServiceImpl implements ProductSpuService {
         // 校验分类、品牌
         validateCategory(createReqVO.getCategoryId());
         brandService.validateProductBrand(createReqVO.getBrandId());
+        validateShop(createReqVO.getShopId());
         // 校验 SKU
         List<ProductSkuSaveReqVO> skuSaveReqList = createReqVO.getSkus();
         productSkuService.validateSkuList(skuSaveReqList, createReqVO.getSpecType());
@@ -82,6 +86,7 @@ public class ProductSpuServiceImpl implements ProductSpuService {
         // 校验分类、品牌
         validateCategory(updateReqVO.getCategoryId());
         brandService.validateProductBrand(updateReqVO.getBrandId());
+        validateShop(updateReqVO.getShopId());
         // 校验SKU
         List<ProductSkuSaveReqVO> skuSaveReqList = updateReqVO.getSkus();
         productSkuService.validateSkuList(skuSaveReqList, updateReqVO.getSpecType());
@@ -128,6 +133,15 @@ public class ProductSpuServiceImpl implements ProductSpuService {
         // 校验层级
         if (categoryService.getCategoryLevel(id) < CATEGORY_LEVEL) {
             throw exception(SPU_SAVE_FAIL_CATEGORY_LEVEL_ERROR);
+        }
+    }
+
+    /**
+     * 店铺为空时，商品归属平台自营；有值时必须是启用店铺。
+     */
+    private void validateShop(Long shopId) {
+        if (shopId != null) {
+            shopService.validateEnabledShop(shopId);
         }
     }
 
