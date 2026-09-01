@@ -20,3 +20,20 @@ CREATE TABLE IF NOT EXISTS `wms_inventory_reservation` (
   UNIQUE KEY `uk_order_sku_warehouse_deleted` (`order_no`, `sku_id`, `warehouse_id`, `deleted`),
   KEY `idx_sku_warehouse_status` (`sku_id`, `warehouse_id`, `status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商城订单 WMS 库存预占表';
+
+CREATE TABLE IF NOT EXISTS `wms_inventory_return` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `return_no` varchar(64) NOT NULL COMMENT '商城售后单号',
+  `order_no` varchar(64) NOT NULL COMMENT '商城履约订单号',
+  `sku_id` bigint NOT NULL COMMENT 'WMS 物料 SKU 编号',
+  `warehouse_id` bigint NOT NULL COMMENT 'WMS 仓库编号',
+  `quantity` decimal(18,4) NOT NULL COMMENT '确认退回数量',
+  `creator` varchar(64) NOT NULL DEFAULT '',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updater` varchar(64) NOT NULL DEFAULT '',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` bit(1) NOT NULL DEFAULT b'0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_return_sku_warehouse_deleted` (`return_no`, `sku_id`, `warehouse_id`, `deleted`),
+  KEY `idx_order_sku_warehouse` (`order_no`, `sku_id`, `warehouse_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='商城售后退货 WMS 入库记录';

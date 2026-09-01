@@ -87,5 +87,9 @@ public interface ErrorCodeConstants {
     // ========== WMS 库存 1-060-300-000 ==========
     ErrorCode INVENTORY_QUANTITY_NOT_ENOUGH = new ErrorCode(1_060_300_000,
             "库存不足，商品：{}，商品规格：{}，仓库：{}，当前库存：{}，变更数量：{}");
+    ErrorCode MALL_INVENTORY_NOT_EXISTS = new ErrorCode(1_060_300_001, "商城商品未配置可用的 WMS 库存");
+    ErrorCode MALL_INVENTORY_NOT_ENOUGH = new ErrorCode(1_060_300_002, "WMS 可售库存不足");
+    ErrorCode MALL_INVENTORY_OPERATION_INVALID = new ErrorCode(1_060_300_003, "商城订单 WMS 库存状态异常");
+    ErrorCode MALL_INVENTORY_QUANTITY_INVALID = new ErrorCode(1_060_300_004, "商城 WMS 库存数量不合法");
 
 }

@@ -65,4 +65,6 @@ public interface ProductSkuApi {
 
     void outboundSkuStock(ProductSkuStockLockReqDTO reqDTO);
 
+    void inboundReturnSkuStock(String returnNo, ProductSkuStockLockReqDTO reqDTO);
+
 }

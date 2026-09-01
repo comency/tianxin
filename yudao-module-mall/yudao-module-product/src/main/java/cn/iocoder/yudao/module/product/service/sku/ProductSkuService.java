@@ -88,6 +88,9 @@ public interface ProductSkuService {
     /** 发货时将已预占的 WMS 库存确认出库。 */
     void outboundSkuStock(ProductSkuStockLockReqDTO reqDTO);
 
+    /** 售后退货由仓库确认签收后，回补已出库的 WMS 库存。 */
+    void inboundReturnSkuStock(String returnNo, ProductSkuStockLockReqDTO reqDTO);
+
     /**
      * 获得商品 SKU 集合
      *

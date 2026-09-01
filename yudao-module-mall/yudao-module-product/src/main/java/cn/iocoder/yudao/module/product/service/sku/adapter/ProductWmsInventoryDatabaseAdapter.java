@@ -33,6 +33,11 @@ public class ProductWmsInventoryDatabaseAdapter implements ProductWmsInventoryAd
         wmsMallInventoryService.outbound(orderNo, convert(items));
     }
 
+    @Override
+    public void inboundReturn(String returnNo, String orderNo, List<Item> items) {
+        wmsMallInventoryService.inboundReturn(returnNo, orderNo, convert(items));
+    }
+
     private static List<WmsMallInventoryService.Item> convert(List<Item> items) {
         return items.stream().map(item -> new WmsMallInventoryService.Item(
                 item.wmsSkuId(), item.warehouseId(), item.count())).toList();

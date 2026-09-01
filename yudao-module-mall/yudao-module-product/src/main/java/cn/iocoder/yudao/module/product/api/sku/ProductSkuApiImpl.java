@@ -64,4 +64,9 @@ public class ProductSkuApiImpl implements ProductSkuApi {
         productSkuService.outboundSkuStock(reqDTO);
     }
 
+    @Override
+    public void inboundReturnSkuStock(String returnNo, ProductSkuStockLockReqDTO reqDTO) {
+        productSkuService.inboundReturnSkuStock(returnNo, reqDTO);
+    }
+
 }

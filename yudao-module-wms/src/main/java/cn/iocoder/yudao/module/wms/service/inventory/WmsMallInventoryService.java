@@ -17,6 +17,9 @@ public interface WmsMallInventoryService {
 
     void outbound(String orderNo, List<Item> items);
 
+    /** WMS 确认售后退货签收后，实物回补库存。 */
+    void inboundReturn(String returnNo, String orderNo, List<Item> items);
+
     record Item(Long skuId, Long warehouseId, Integer count) {
     }
 }

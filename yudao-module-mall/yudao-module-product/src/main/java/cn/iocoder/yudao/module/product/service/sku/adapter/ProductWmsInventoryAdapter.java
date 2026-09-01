@@ -17,6 +17,8 @@ public interface ProductWmsInventoryAdapter {
 
     void outbound(String orderNo, List<Item> items);
 
+    void inboundReturn(String returnNo, String orderNo, List<Item> items);
+
     record Item(Long wmsSkuId, Long warehouseId, Integer count) {
     }
 }

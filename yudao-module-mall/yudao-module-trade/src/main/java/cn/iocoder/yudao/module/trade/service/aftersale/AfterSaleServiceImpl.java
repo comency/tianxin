@@ -11,6 +11,8 @@ import cn.iocoder.yudao.module.pay.api.refund.PayRefundApi;
 import cn.iocoder.yudao.module.pay.api.refund.dto.PayRefundCreateReqDTO;
 import cn.iocoder.yudao.module.pay.api.refund.dto.PayRefundRespDTO;
 import cn.iocoder.yudao.module.pay.enums.refund.PayRefundStatusEnum;
+import cn.iocoder.yudao.module.product.api.sku.ProductSkuApi;
+import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuStockLockReqDTO;
 import cn.iocoder.yudao.module.promotion.api.combination.CombinationRecordApi;
 import cn.iocoder.yudao.module.promotion.api.combination.dto.CombinationRecordRespDTO;
 import cn.iocoder.yudao.module.promotion.enums.combination.CombinationRecordStatusEnum;
@@ -80,6 +82,8 @@ public class AfterSaleServiceImpl implements AfterSaleService {
     private PayRefundApi payRefundApi;
     @Resource
     private CombinationRecordApi combinationRecordApi;
+    @Resource
+    private ProductSkuApi productSkuApi;
 
     @Resource
     private TradeOrderProperties tradeOrderProperties;
@@ -294,6 +298,14 @@ public class AfterSaleServiceImpl implements AfterSaleService {
         updateAfterSaleStatus(afterSale.getId(), AfterSaleStatusEnum.BUYER_DELIVERY.getStatus(), new AfterSaleDO()
                 .setStatus(AfterSaleStatusEnum.WAIT_REFUND.getStatus()).setReceiveTime(LocalDateTime.now())
                 .setHandlerUserId(userId));
+
+        // 只有退货退款在商家确认签收后才回补实物库存；仅退款不产生入库。
+        if (ObjectUtil.equal(afterSale.getWay(), AfterSaleWayEnum.RETURN_AND_REFUND.getWay())) {
+            ProductSkuStockLockReqDTO.Item item = new ProductSkuStockLockReqDTO.Item()
+                    .setId(afterSale.getSkuId()).setCount(afterSale.getCount());
+            productSkuApi.inboundReturnSkuStock(afterSale.getNo(),
+                    new ProductSkuStockLockReqDTO(afterSale.getOrderNo(), java.util.List.of(item)));
+        }
 
         // 记录售后日志
         AfterSaleLogUtils.setAfterSaleInfo(afterSale.getId(), afterSale.getStatus(),

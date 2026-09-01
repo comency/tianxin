@@ -309,6 +309,15 @@ public class ProductSkuServiceImpl implements ProductSkuService {
         }
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void inboundReturnSkuStock(String returnNo, ProductSkuStockLockReqDTO reqDTO) {
+        StockFulfillment fulfillment = resolveStockFulfillment(reqDTO);
+        if (CollUtil.isNotEmpty(fulfillment.wmsItems())) {
+            productWmsInventoryAdapter.inboundReturn(returnNo, reqDTO.getOrderNo(), fulfillment.wmsItems());
+        }
+    }
+
     private StockFulfillment resolveStockFulfillment(ProductSkuStockLockReqDTO reqDTO) {
         Map<Long, Integer> skuCountMap = new LinkedHashMap<>();
         reqDTO.getItems().forEach(item -> {

@@ -1,10 +1,11 @@
 package cn.iocoder.yudao.module.wms.service.inventory;
 
-import cn.hutool.core.lang.Assert;
 import cn.iocoder.yudao.module.wms.dal.dataobject.inventory.WmsInventoryDO;
 import cn.iocoder.yudao.module.wms.dal.dataobject.inventory.WmsInventoryReservationDO;
+import cn.iocoder.yudao.module.wms.dal.dataobject.inventory.WmsInventoryReturnDO;
 import cn.iocoder.yudao.module.wms.dal.mysql.inventory.WmsInventoryMapper;
 import cn.iocoder.yudao.module.wms.dal.mysql.inventory.WmsInventoryReservationMapper;
+import cn.iocoder.yudao.module.wms.dal.mysql.inventory.WmsInventoryReturnMapper;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,6 +13,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
+
+import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static cn.iocoder.yudao.module.wms.enums.ErrorCodeConstants.*;
 
 /** 本地数据库 WMS 适配实现。 */
 @Service
@@ -21,6 +25,8 @@ public class WmsMallInventoryServiceImpl implements WmsMallInventoryService {
     private WmsInventoryMapper inventoryMapper;
     @Resource
     private WmsInventoryReservationMapper reservationMapper;
+    @Resource
+    private WmsInventoryReturnMapper returnMapper;
 
     @Override
     public int getAvailableStock(Long skuId, Long warehouseId) {
@@ -39,15 +45,20 @@ public class WmsMallInventoryServiceImpl implements WmsMallInventoryService {
             WmsInventoryReservationDO reservation = reservationMapper.selectByOrderNoAndSkuIdAndWarehouseId(
                     orderNo, item.skuId(), item.warehouseId());
             if (reservation != null) {
-                Assert.isTrue(reservation.getStatus().equals(WmsInventoryReservationDO.STATUS_LOCKED)
-                                && reservation.getQuantity().compareTo(quantity(item)) == 0,
-                        "商城订单库存预占状态异常");
+                if (!reservation.getStatus().equals(WmsInventoryReservationDO.STATUS_LOCKED)
+                        || reservation.getQuantity().compareTo(quantity(item)) != 0) {
+                    throw exception(MALL_INVENTORY_OPERATION_INVALID);
+                }
                 continue;
             }
             WmsInventoryDO inventory = inventoryMapper.selectBySkuIdAndWarehouseIdForUpdate(item.skuId(), item.warehouseId());
-            Assert.notNull(inventory, "WMS 库存不存在");
+            if (inventory == null) {
+                throw exception(MALL_INVENTORY_NOT_EXISTS);
+            }
             BigDecimal available = inventory.getQuantity().subtract(reservationMapper.selectLockedQuantity(item.skuId(), item.warehouseId()));
-            Assert.isTrue(available.compareTo(quantity(item)) >= 0, "WMS 可售库存不足");
+            if (available.compareTo(quantity(item)) < 0) {
+                throw exception(MALL_INVENTORY_NOT_ENOUGH);
+            }
             reservationMapper.insert(new WmsInventoryReservationDO().setOrderNo(orderNo).setSkuId(item.skuId())
                     .setWarehouseId(item.warehouseId()).setQuantity(quantity(item))
                     .setStatus(WmsInventoryReservationDO.STATUS_LOCKED));
@@ -67,8 +78,10 @@ public class WmsMallInventoryServiceImpl implements WmsMallInventoryService {
             if (reservation.getStatus().equals(WmsInventoryReservationDO.STATUS_OUTBOUNDED)) {
                 continue;
             }
-            Assert.isTrue(reservation.getStatus().equals(WmsInventoryReservationDO.STATUS_LOCKED), "商城订单库存不能释放");
-            Assert.isTrue(reservation.getQuantity().compareTo(quantity(item)) == 0, "商城订单释放数量不一致");
+            if (!reservation.getStatus().equals(WmsInventoryReservationDO.STATUS_LOCKED)
+                    || reservation.getQuantity().compareTo(quantity(item)) != 0) {
+                throw exception(MALL_INVENTORY_OPERATION_INVALID);
+            }
             reservationMapper.updateById(new WmsInventoryReservationDO().setId(reservation.getId())
                     .setStatus(WmsInventoryReservationDO.STATUS_RELEASED));
         }
@@ -83,12 +96,17 @@ public class WmsMallInventoryServiceImpl implements WmsMallInventoryService {
             if (reservation != null && reservation.getStatus().equals(WmsInventoryReservationDO.STATUS_OUTBOUNDED)) {
                 continue;
             }
-            Assert.notNull(reservation, "商城订单未锁定 WMS 库存");
-            Assert.isTrue(reservation.getStatus().equals(WmsInventoryReservationDO.STATUS_LOCKED), "商城订单库存不能出库");
-            Assert.isTrue(reservation.getQuantity().compareTo(quantity(item)) == 0, "商城订单出库数量不一致");
+            if (reservation == null || !reservation.getStatus().equals(WmsInventoryReservationDO.STATUS_LOCKED)
+                    || reservation.getQuantity().compareTo(quantity(item)) != 0) {
+                throw exception(MALL_INVENTORY_OPERATION_INVALID);
+            }
             WmsInventoryDO inventory = inventoryMapper.selectBySkuIdAndWarehouseIdForUpdate(item.skuId(), item.warehouseId());
-            Assert.notNull(inventory, "WMS 库存不存在");
-            Assert.isTrue(inventory.getQuantity().compareTo(quantity(item)) >= 0, "WMS 实物库存不足");
+            if (inventory == null) {
+                throw exception(MALL_INVENTORY_NOT_EXISTS);
+            }
+            if (inventory.getQuantity().compareTo(quantity(item)) < 0) {
+                throw exception(MALL_INVENTORY_NOT_ENOUGH);
+            }
             inventoryMapper.updateById(new WmsInventoryDO().setId(inventory.getId())
                     .setQuantity(inventory.getQuantity().subtract(quantity(item))));
             reservationMapper.updateById(new WmsInventoryReservationDO().setId(reservation.getId())
@@ -96,9 +114,43 @@ public class WmsMallInventoryServiceImpl implements WmsMallInventoryService {
         }
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void inboundReturn(String returnNo, String orderNo, List<Item> items) {
+        for (Item item : items) {
+            BigDecimal returnQuantity = quantity(item);
+            WmsInventoryReturnDO existing = returnMapper.selectByReturnNoAndSkuIdAndWarehouseId(
+                    returnNo, item.skuId(), item.warehouseId());
+            if (existing != null) {
+                if (existing.getQuantity().compareTo(returnQuantity) != 0) {
+                    throw exception(MALL_INVENTORY_OPERATION_INVALID);
+                }
+                continue;
+            }
+            WmsInventoryReservationDO reservation = reservationMapper.selectByOrderNoAndSkuIdAndWarehouseId(
+                    orderNo, item.skuId(), item.warehouseId());
+            if (reservation == null || !reservation.getStatus().equals(WmsInventoryReservationDO.STATUS_OUTBOUNDED)) {
+                throw exception(MALL_INVENTORY_OPERATION_INVALID);
+            }
+            BigDecimal returned = returnMapper.selectReturnedQuantity(orderNo, item.skuId(), item.warehouseId());
+            if (returned.add(returnQuantity).compareTo(reservation.getQuantity()) > 0) {
+                throw exception(MALL_INVENTORY_QUANTITY_INVALID);
+            }
+            WmsInventoryDO inventory = inventoryMapper.selectBySkuIdAndWarehouseIdForUpdate(item.skuId(), item.warehouseId());
+            if (inventory == null) {
+                throw exception(MALL_INVENTORY_NOT_EXISTS);
+            }
+            inventoryMapper.updateById(new WmsInventoryDO().setId(inventory.getId())
+                    .setQuantity(inventory.getQuantity().add(returnQuantity)));
+            returnMapper.insert(new WmsInventoryReturnDO().setReturnNo(returnNo).setOrderNo(orderNo)
+                    .setSkuId(item.skuId()).setWarehouseId(item.warehouseId()).setQuantity(returnQuantity));
+        }
+    }
+
     private static BigDecimal quantity(Item item) {
-        Assert.notNull(item.count(), "库存数量不能为空");
-        Assert.isTrue(item.count() > 0, "库存数量必须大于 0");
+        if (item.count() == null || item.count() <= 0) {
+            throw exception(MALL_INVENTORY_QUANTITY_INVALID);
+        }
         return BigDecimal.valueOf(item.count());
     }
 }
