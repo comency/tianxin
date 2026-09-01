@@ -7,6 +7,7 @@ import cn.iocoder.yudao.framework.mybatis.core.query.MPJLambdaWrapperX;
 import cn.iocoder.yudao.module.trade.controller.admin.order.vo.TradeOrderPageReqVO;
 import cn.iocoder.yudao.module.trade.controller.app.order.vo.AppTradeOrderPageReqVO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDO;
+import cn.iocoder.yudao.module.trade.enums.order.TradeOrderStatusEnum;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderTypeEnum;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import org.apache.ibatis.annotations.Mapper;
@@ -129,6 +130,17 @@ public interface TradeOrderMapper extends BaseMapperX<TradeOrderDO> {
 
     default TradeOrderDO selectOneByPickUpVerifyCode(String pickUpVerifyCode) {
         return selectOne(TradeOrderDO::getPickUpVerifyCode, pickUpVerifyCode);
+    }
+
+    default List<TradeOrderDO> selectListForShopSettlement(Long shopId, LocalDateTime periodStartTime,
+                                                           LocalDateTime periodEndTime) {
+        return selectList(new LambdaQueryWrapperX<TradeOrderDO>()
+                .eq(TradeOrderDO::getShopId, shopId)
+                .eq(TradeOrderDO::getPayStatus, true)
+                .eq(TradeOrderDO::getStatus, TradeOrderStatusEnum.COMPLETED.getStatus())
+                .ge(TradeOrderDO::getFinishTime, periodStartTime)
+                .le(TradeOrderDO::getFinishTime, periodEndTime)
+                .orderByAsc(TradeOrderDO::getId));
     }
 
     default TradeOrderDO selectByUserIdAndCombinationActivityIdAndStatus(Long userId, Long combinationActivityId, Integer status) {

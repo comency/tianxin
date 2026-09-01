@@ -117,4 +117,12 @@ public interface ErrorCodeConstants {
     ErrorCode BROKERAGE_WITHDRAW_UPDATE_STATUS_FAIL_PAY_MERCHANT_EXISTS = new ErrorCode(1_011_008_008, "提现单更新转账状态失败，转账单的商户订单不匹配");
     ErrorCode BROKERAGE_WITHDRAW_UPDATE_STATUS_FAIL_PAY_CHANNEL_NOT_MATCH = new ErrorCode(1_011_008_009, "提现单更新转账状态失败，转账渠道不匹配");
 
+    // ========== 店铺结算模块 1-011-009-000 ==========
+    ErrorCode SHOP_SETTLEMENT_NOT_EXISTS = new ErrorCode(1_011_009_000, "店铺结算单不存在");
+    ErrorCode SHOP_SETTLEMENT_NO_ELIGIBLE_ORDER = new ErrorCode(1_011_009_001, "所选周期内没有可结算订单");
+    ErrorCode SHOP_SETTLEMENT_STATUS_NOT_WAIT_AUDIT = new ErrorCode(1_011_009_002, "店铺结算单不是待审核状态");
+    ErrorCode SHOP_SETTLEMENT_STATUS_NOT_AUDITED = new ErrorCode(1_011_009_003, "店铺结算单不是已审核状态");
+    ErrorCode SHOP_SETTLEMENT_PERIOD_INVALID = new ErrorCode(1_011_009_004, "结算周期开始时间必须早于结束时间");
+    ErrorCode SHOP_SETTLEMENT_SHOP_NOT_EXISTS = new ErrorCode(1_011_009_005, "结算店铺不存在");
+
 }
