@@ -18,7 +18,10 @@
         @tap="onOrderDetail(order.id)"
       >
         <view class="order-card-header ss-flex ss-col-center ss-row-between ss-p-x-20">
-          <view class="order-no">订单号：{{ order.no }}</view>
+          <view>
+            <view class="shop-name">{{ order.shopName || '平台自营' }}</view>
+            <view class="order-no">订单号：{{ order.no }}</view>
+          </view>
           <view class="order-state ss-font-26" :class="formatOrderColor(order)">
             {{ formatOrderStatus(order) }}
           </view>
@@ -423,12 +426,20 @@
 
   .order-list-card-box {
     border: 1rpx solid #edf0f1;
-    box-shadow: 0 8rpx 20rpx rgba(32, 68, 82, .05);
+    box-shadow: 0 8rpx 20rpx rgba(32, 68, 82, 0.05);
     .order-card-header {
       height: 80rpx;
 
+      .shop-name {
+        color: #1d3540;
+        font-size: 25rpx;
+        font-weight: 600;
+        line-height: 30rpx;
+      }
+
       .order-no {
         font-size: 26rpx;
+        line-height: 30rpx;
         font-weight: 500;
       }
 

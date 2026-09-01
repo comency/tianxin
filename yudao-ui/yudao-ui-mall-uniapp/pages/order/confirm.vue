@@ -320,6 +320,13 @@
       sheep.$store('cart').getList();
     }
 
+    // 多店商品会由后端拆为独立订单和独立支付单，跳转订单列表让会员逐笔完成支付。
+    if (data.orderIds?.length > 1) {
+      sheep.$helper.toast(`已按店铺拆分为 ${data.orderIds.length} 笔订单，请分别完成支付`);
+      sheep.$router.redirect('/pages/order/list');
+      return;
+    }
+
     // 跳转到支付页面
     if (data.payOrderId && data.payOrderId > 0) {
       sheep.$router.redirect('/pages/pay/index', {

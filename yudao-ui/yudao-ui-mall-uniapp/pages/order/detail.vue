@@ -134,6 +134,10 @@
     <!-- 订单信息 -->
     <view class="notice-box">
       <view class="notice-box__content">
+        <view class="notice-item">
+          <text class="title">所属店铺：</text>
+          <text class="detail">{{ state.orderInfo.shopName || '平台自营' }}</text>
+        </view>
         <view class="notice-item--center">
           <view class="ss-flex ss-flex-1">
             <text class="title">订单编号：</text>

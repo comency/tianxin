@@ -25,46 +25,58 @@
       </view>
       <!-- 内容 -->
       <view class="cart-content ss-flex-1 ss-p-x-30 ss-m-b-40">
-        <view v-for="item in state.list" :key="item.id" class="goods-box ss-r-10 ss-m-b-14">
-          <view class="ss-flex ss-col-center">
-            <label class="check-box ss-flex ss-col-center ss-p-l-10" @tap="onSelectSingle(item.id)">
-              <radio
-                :checked="state.selectedIds.includes(item.id)"
-                color="var(--ui-BG-Main)"
-                style="transform: scale(0.8)"
-                @tap.stop="onSelectSingle(item.id)"
-              />
-            </label>
-            <view v-if="item.spu?.status !== 1 && !state.editMode" class="down-box">
-              该商品已下架
+        <view v-for="group in state.shopGroups" :key="group.id" class="shop-group ss-m-b-24">
+          <view class="shop-group-header ss-flex ss-col-center ss-row-between">
+            <view class="shop-group-title ss-flex ss-col-center">
+              <text class="shop-mark">店</text>
+              <text>{{ group.name }}</text>
             </view>
-            <view v-else-if="item.spu?.stock <= 0 && !state.editMode" class="down-box">
-              该商品无库存
-            </view>
-            <s-goods-item
-              :img="item.spu.picUrl || item.goods.image"
-              :price="item.sku.price"
-              :skuText="
-                item.sku.properties.length > 1
-                  ? item.sku.properties.reduce(
-                      (items2, items) => items2.valueName + ' ' + items.valueName,
-                    )
-                  : item.sku.properties[0].valueName
-              "
-              :title="item.spu.name"
-              :titleWidth="400"
-              priceColor="#FF3000"
-            >
-              <template v-if="!state.editMode" v-slot:tool>
-                <su-number-box
-                  v-model="item.count"
-                  :max="item.sku.stock"
-                  :min="0"
-                  :step="1"
-                  @change="onNumberChange($event, item)"
+            <text class="shop-count">{{ group.items.length }} 件商品</text>
+          </view>
+          <view v-for="item in group.items" :key="item.id" class="goods-box ss-m-b-14">
+            <view class="ss-flex ss-col-center">
+              <label
+                class="check-box ss-flex ss-col-center ss-p-l-10"
+                @tap="onSelectSingle(item.id)"
+              >
+                <radio
+                  :checked="state.selectedIds.includes(item.id)"
+                  color="var(--ui-BG-Main)"
+                  style="transform: scale(0.8)"
+                  @tap.stop="onSelectSingle(item.id)"
                 />
-              </template>
-            </s-goods-item>
+              </label>
+              <view v-if="item.spu?.status !== 1 && !state.editMode" class="down-box">
+                该商品已下架
+              </view>
+              <view v-else-if="item.spu?.stock <= 0 && !state.editMode" class="down-box">
+                该商品无库存
+              </view>
+              <s-goods-item
+                :img="item.spu.picUrl || item.goods.image"
+                :price="item.sku.price"
+                :skuText="
+                  item.sku.properties.length > 1
+                    ? item.sku.properties.reduce(
+                        (items2, items) => items2.valueName + ' ' + items.valueName,
+                      )
+                    : item.sku.properties[0].valueName
+                "
+                :title="item.spu.name"
+                :titleWidth="400"
+                priceColor="#FF3000"
+              >
+                <template v-if="!state.editMode" v-slot:tool>
+                  <su-number-box
+                    v-model="item.count"
+                    :max="item.sku.stock"
+                    :min="0"
+                    :step="1"
+                    @change="onNumberChange($event, item)"
+                  />
+                </template>
+              </s-goods-item>
+            </view>
           </view>
         </view>
       </view>
@@ -132,7 +144,24 @@
     selectedIds: computed(() => cart.selectedIds),
     isAllSelected: computed(() => cart.isAllSelected),
     totalPriceSelected: computed(() => cart.totalPriceSelected),
+    shopGroups: computed(() => groupCartByShop(cart.list)),
   });
+
+  function groupCartByShop(cartList) {
+    const groups = new Map();
+    cartList.forEach((item) => {
+      const shopId = item.spu?.shopId || 0;
+      if (!groups.has(shopId)) {
+        groups.set(shopId, {
+          id: shopId,
+          name: item.spu?.shopName || (shopId === 0 ? '平台自营' : '企业店铺'),
+          items: [],
+        });
+      }
+      groups.get(shopId).items.push(item);
+    });
+    return Array.from(groups.values());
+  }
 
   // 单选选中
   function onSelectSingle(id) {
@@ -291,10 +320,40 @@
     .cart-content {
       margin-top: 70rpx;
 
+      .shop-group {
+        .shop-group-header {
+          height: 66rpx;
+          padding: 0 12rpx;
+
+          .shop-group-title {
+            color: #1d3540;
+            font-size: 28rpx;
+            font-weight: 600;
+
+            .shop-mark {
+              width: 32rpx;
+              height: 32rpx;
+              margin-right: 10rpx;
+              border-radius: 8rpx;
+              background: #1a8b82;
+              color: #fff;
+              font-size: 20rpx;
+              line-height: 32rpx;
+              text-align: center;
+            }
+          }
+
+          .shop-count {
+            color: #8b9aa1;
+            font-size: 22rpx;
+          }
+        }
+      }
+
       .goods-box {
         background-color: #fff;
         border-radius: 18rpx;
-        box-shadow: 0 6rpx 16rpx rgba(32, 68, 82, .05);
+        box-shadow: 0 6rpx 16rpx rgba(32, 68, 82, 0.05);
         position: relative;
       }
       // 下架商品
