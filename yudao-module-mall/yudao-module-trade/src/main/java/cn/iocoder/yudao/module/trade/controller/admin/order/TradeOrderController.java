@@ -7,6 +7,8 @@ import cn.iocoder.yudao.module.member.api.user.MemberUserApi;
 import cn.iocoder.yudao.module.member.api.user.dto.MemberUserRespDTO;
 import cn.iocoder.yudao.module.product.api.shop.ProductShopApi;
 import cn.iocoder.yudao.module.product.api.shop.dto.ProductShopRespDTO;
+import cn.iocoder.yudao.module.product.api.sku.ProductSkuApi;
+import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuStockStatusRespDTO;
 import cn.iocoder.yudao.module.trade.controller.admin.order.vo.*;
 import cn.iocoder.yudao.module.trade.convert.order.TradeOrderConvert;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDO;
@@ -54,6 +56,8 @@ public class TradeOrderController {
     private MemberUserApi memberUserApi;
     @Resource
     private ProductShopApi productShopApi;
+    @Resource
+    private ProductSkuApi productSkuApi;
 
     @GetMapping("/page")
     @Operation(summary = "获得交易订单分页")
@@ -74,7 +78,10 @@ public class TradeOrderController {
         List<TradeOrderItemDO> orderItems = tradeOrderQueryService.getOrderItemListByOrderId(
                 convertSet(pageResult.getList(), TradeOrderDO::getId));
         // 最终组合
-        return success(TradeOrderConvert.INSTANCE.convertPage(pageResult, orderItems, userMap));
+        PageResult<TradeOrderPageItemRespVO> result = TradeOrderConvert.INSTANCE.convertPage(pageResult, orderItems,
+                userMap);
+        fillWmsStockStatus(result.getList());
+        return success(result);
     }
 
     @GetMapping("/summary")
@@ -104,7 +111,10 @@ public class TradeOrderController {
         MemberUserRespDTO brokerageUser = order.getBrokerageUserId() != null ?
                 memberUserApi.getUser(order.getBrokerageUserId()) : null;
         List<TradeOrderLogDO> orderLogs = tradeOrderLogService.getOrderLogListByOrderId(id);
-        return success(TradeOrderConvert.INSTANCE.convert(order, orderItems, orderLogs, user, brokerageUser));
+        TradeOrderDetailRespVO result = TradeOrderConvert.INSTANCE.convert(order, orderItems, orderLogs, user,
+                brokerageUser);
+        fillWmsStockStatus(List.of(result));
+        return success(result);
     }
 
     @GetMapping("/get-express-track-list")
@@ -202,6 +212,23 @@ public class TradeOrderController {
 
     private ProductShopRespDTO getManagedShop() {
         return productShopApi.getShopByManagerUserId(getLoginUserId());
+    }
+
+    private void fillWmsStockStatus(List<? extends TradeOrderBaseVO> orders) {
+        if (CollUtil.isEmpty(orders)) {
+            return;
+        }
+        Map<String, ProductSkuStockStatusRespDTO> statusMap = productSkuApi.getWmsStockStatus(
+                convertSet(orders, TradeOrderBaseVO::getNo));
+        orders.forEach(order -> {
+            ProductSkuStockStatusRespDTO status = statusMap.get(order.getNo());
+            if (status == null) {
+                return;
+            }
+            order.setWmsStockStatus(new TradeOrderBaseVO.WmsStockStatus().setStatus(status.getStatus())
+                    .setTotalCount(status.getTotalCount()).setLockedCount(status.getLockedCount())
+                    .setReleasedCount(status.getReleasedCount()).setOutboundCount(status.getOutboundCount()));
+        });
     }
 
 }

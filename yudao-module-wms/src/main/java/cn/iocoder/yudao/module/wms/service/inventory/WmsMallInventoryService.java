@@ -1,7 +1,9 @@
 package cn.iocoder.yudao.module.wms.service.inventory;
 
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 面向商城的库存适配服务。
@@ -14,6 +16,9 @@ public interface WmsMallInventoryService {
 
     /** 获取商城对账所需的 WMS 库存快照。 */
     InventorySnapshot getSnapshot(Long skuId, Long warehouseId);
+
+    /** 批量查询商城订单在 WMS 中的库存履约状态，未映射 WMS 的订单不会出现在结果中。 */
+    Map<String, ReservationSummary> getReservationSummaries(Collection<String> orderNos);
 
     void reserve(String orderNo, List<Item> items);
 
@@ -29,5 +34,9 @@ public interface WmsMallInventoryService {
 
     record InventorySnapshot(boolean exists, BigDecimal physicalQuantity, BigDecimal lockedQuantity,
                              int availableStock) {
+    }
+
+    record ReservationSummary(String status, int totalCount, int lockedCount, int releasedCount,
+                              int outboundCount) {
     }
 }

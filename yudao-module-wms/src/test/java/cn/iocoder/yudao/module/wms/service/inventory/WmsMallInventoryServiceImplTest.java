@@ -12,6 +12,7 @@ import org.springframework.context.annotation.Import;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 
 import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertServiceException;
 import static cn.iocoder.yudao.module.wms.enums.ErrorCodeConstants.MALL_INVENTORY_NOT_ENOUGH;
@@ -74,6 +75,24 @@ class WmsMallInventoryServiceImplTest extends BaseDbUnitTest {
         assertServiceException(() -> mallInventoryService.reserve("ORDER-OVER", items), MALL_INVENTORY_NOT_ENOUGH);
         assertEquals(0L, reservationMapper.selectCount());
         assertQuantity("2", 1003L, 10L);
+    }
+
+    @Test
+    void getReservationSummaries_returnsBatchFulfillmentStatus() {
+        createInventory(1004L, 10L, "10");
+        createInventory(1005L, 10L, "10");
+        mallInventoryService.reserve("ORDER-LOCKED", List.of(new WmsMallInventoryService.Item(1004L, 10L, 2)));
+        mallInventoryService.reserve("ORDER-OUTBOUNDED", List.of(new WmsMallInventoryService.Item(1005L, 10L, 3)));
+        mallInventoryService.outbound("ORDER-OUTBOUNDED", List.of(new WmsMallInventoryService.Item(1005L, 10L, 3)));
+
+        Map<String, WmsMallInventoryService.ReservationSummary> summaries = mallInventoryService
+                .getReservationSummaries(List.of("ORDER-LOCKED", "ORDER-OUTBOUNDED", "LOCAL-ORDER"));
+
+        assertEquals(2, summaries.size());
+        assertEquals("LOCKED", summaries.get("ORDER-LOCKED").status());
+        assertEquals(1, summaries.get("ORDER-LOCKED").lockedCount());
+        assertEquals("OUTBOUNDED", summaries.get("ORDER-OUTBOUNDED").status());
+        assertEquals(1, summaries.get("ORDER-OUTBOUNDED").outboundCount());
     }
 
     private void createInventory(Long skuId, Long warehouseId, String quantity) {

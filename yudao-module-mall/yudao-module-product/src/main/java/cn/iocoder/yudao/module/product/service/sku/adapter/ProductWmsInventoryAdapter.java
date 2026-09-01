@@ -1,7 +1,9 @@
 package cn.iocoder.yudao.module.product.service.sku.adapter;
 
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 商城现货库存适配接口。
@@ -13,6 +15,8 @@ public interface ProductWmsInventoryAdapter {
     int getAvailableStock(Long wmsSkuId, Long warehouseId);
 
     InventorySnapshot getSnapshot(Long wmsSkuId, Long warehouseId);
+
+    Map<String, ReservationSummary> getReservationSummaries(Collection<String> orderNos);
 
     void reserve(String orderNo, List<Item> items);
 
@@ -27,5 +31,9 @@ public interface ProductWmsInventoryAdapter {
 
     record InventorySnapshot(boolean exists, BigDecimal physicalQuantity, BigDecimal lockedQuantity,
                              int availableStock) {
+    }
+
+    record ReservationSummary(String status, int totalCount, int lockedCount, int releasedCount,
+                              int outboundCount) {
     }
 }

@@ -70,6 +70,14 @@ export interface OrderVO {
   }
   // 订单操作日志
   logs?: OrderLogRespVO[]
+  // WMS 库存履约状态；未映射 WMS 的本地库存订单为空
+  wmsStockStatus?: {
+    status: 'LOCKED' | 'RELEASED' | 'OUTBOUNDED' | 'MIXED'
+    totalCount: number
+    lockedCount: number
+    releasedCount: number
+    outboundCount: number
+  }
 }
 
 export interface OrderLogRespVO {

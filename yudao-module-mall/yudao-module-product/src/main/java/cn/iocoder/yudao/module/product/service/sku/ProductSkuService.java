@@ -5,9 +5,11 @@ import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuStockLockReqDTO;
 import cn.iocoder.yudao.module.product.controller.admin.spu.vo.ProductSkuSaveReqVO;
 import cn.iocoder.yudao.module.product.dal.dataobject.sku.ProductSkuDO;
 import cn.iocoder.yudao.module.product.service.sku.dto.ProductWmsStockReconciliationDTO;
+import cn.iocoder.yudao.module.product.service.sku.adapter.ProductWmsInventoryAdapter;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 商品 SKU Service 接口
@@ -91,6 +93,9 @@ public interface ProductSkuService {
 
     /** 售后退货由仓库确认签收后，回补已出库的 WMS 库存。 */
     void inboundReturnSkuStock(String returnNo, ProductSkuStockLockReqDTO reqDTO);
+
+    /** 批量查询订单的 WMS 库存履约状态。 */
+    Map<String, ProductWmsInventoryAdapter.ReservationSummary> getWmsStockStatus(Collection<String> orderNos);
 
     /** 对比商品缓存库存与 WMS 库存；spuIds 为 null 时查询全部。 */
     List<ProductWmsStockReconciliationDTO> getWmsStockReconciliation(Collection<Long> spuIds);

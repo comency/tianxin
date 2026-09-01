@@ -320,6 +320,11 @@ public class ProductSkuServiceImpl implements ProductSkuService {
     }
 
     @Override
+    public Map<String, ProductWmsInventoryAdapter.ReservationSummary> getWmsStockStatus(Collection<String> orderNos) {
+        return productWmsInventoryAdapter.getReservationSummaries(orderNos);
+    }
+
+    @Override
     public List<ProductWmsStockReconciliationDTO> getWmsStockReconciliation(Collection<Long> spuIds) {
         List<ProductWmsStockReconciliationDTO> results = productSkuMapper.selectListWithWmsMapping(spuIds).stream()
                 .map(this::reconcileWmsStock)

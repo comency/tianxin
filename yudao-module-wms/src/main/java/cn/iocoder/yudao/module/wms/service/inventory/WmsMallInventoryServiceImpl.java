@@ -12,7 +12,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.module.wms.enums.ErrorCodeConstants.*;
@@ -43,6 +46,27 @@ public class WmsMallInventoryServiceImpl implements WmsMallInventoryService {
         int availableStock = inventory.getQuantity().subtract(locked).max(BigDecimal.ZERO)
                 .setScale(0, RoundingMode.DOWN).intValue();
         return new InventorySnapshot(true, inventory.getQuantity(), locked, availableStock);
+    }
+
+    @Override
+    public Map<String, ReservationSummary> getReservationSummaries(Collection<String> orderNos) {
+        if (orderNos == null || orderNos.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, List<WmsInventoryReservationDO>> reservationMap = reservationMapper.selectListByOrderNos(orderNos)
+                .stream().collect(java.util.stream.Collectors.groupingBy(WmsInventoryReservationDO::getOrderNo));
+        Map<String, ReservationSummary> result = new HashMap<>();
+        reservationMap.forEach((orderNo, reservations) -> {
+            int lockedCount = countStatus(reservations, WmsInventoryReservationDO.STATUS_LOCKED);
+            int releasedCount = countStatus(reservations, WmsInventoryReservationDO.STATUS_RELEASED);
+            int outboundCount = countStatus(reservations, WmsInventoryReservationDO.STATUS_OUTBOUNDED);
+            String status = lockedCount == reservations.size() ? "LOCKED"
+                    : releasedCount == reservations.size() ? "RELEASED"
+                    : outboundCount == reservations.size() ? "OUTBOUNDED" : "MIXED";
+            result.put(orderNo, new ReservationSummary(status, reservations.size(), lockedCount, releasedCount,
+                    outboundCount));
+        });
+        return result;
     }
 
     @Override
@@ -159,5 +183,9 @@ public class WmsMallInventoryServiceImpl implements WmsMallInventoryService {
             throw exception(MALL_INVENTORY_QUANTITY_INVALID);
         }
         return BigDecimal.valueOf(item.count());
+    }
+
+    private static int countStatus(List<WmsInventoryReservationDO> reservations, int status) {
+        return (int) reservations.stream().filter(item -> item.getStatus().equals(status)).count();
     }
 }

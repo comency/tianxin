@@ -4,6 +4,7 @@ import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuRespDTO;
 import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuUpdateStockReqDTO;
 import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuStockLockReqDTO;
+import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuStockStatusRespDTO;
 import cn.iocoder.yudao.module.product.dal.dataobject.sku.ProductSkuDO;
 import cn.iocoder.yudao.module.product.service.sku.ProductSkuService;
 import jakarta.annotation.Resource;
@@ -12,6 +13,8 @@ import org.springframework.validation.annotation.Validated;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 商品 SKU API 实现类
@@ -67,6 +70,14 @@ public class ProductSkuApiImpl implements ProductSkuApi {
     @Override
     public void inboundReturnSkuStock(String returnNo, ProductSkuStockLockReqDTO reqDTO) {
         productSkuService.inboundReturnSkuStock(returnNo, reqDTO);
+    }
+
+    @Override
+    public Map<String, ProductSkuStockStatusRespDTO> getWmsStockStatus(Collection<String> orderNos) {
+        return productSkuService.getWmsStockStatus(orderNos).entrySet().stream().collect(Collectors.toMap(
+                Map.Entry::getKey, entry -> new ProductSkuStockStatusRespDTO(entry.getValue().status(),
+                        entry.getValue().totalCount(), entry.getValue().lockedCount(), entry.getValue().releasedCount(),
+                        entry.getValue().outboundCount())));
     }
 
 }

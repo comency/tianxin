@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import org.apache.ibatis.annotations.Mapper;
 
 import java.math.BigDecimal;
+import java.util.Collection;
 import java.util.List;
 
 @Mapper
@@ -24,5 +25,9 @@ public interface WmsInventoryReservationMapper extends BaseMapperX<WmsInventoryR
                         .eq("warehouse_id", warehouseId)
                         .eq("status", WmsInventoryReservationDO.STATUS_LOCKED));
         return values.isEmpty() ? BigDecimal.ZERO : new BigDecimal(String.valueOf(values.getFirst()));
+    }
+
+    default List<WmsInventoryReservationDO> selectListByOrderNos(Collection<String> orderNos) {
+        return selectList(WmsInventoryReservationDO::getOrderNo, orderNos);
     }
 }

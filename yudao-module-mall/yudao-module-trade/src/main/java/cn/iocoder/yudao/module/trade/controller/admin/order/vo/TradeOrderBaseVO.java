@@ -154,4 +154,28 @@ public class TradeOrderBaseVO {
     @Schema(description = "推广人编号", example = "1")
     private Long brokerageUserId;
 
+    // ========== WMS 库存履约信息 ==========
+
+    @Schema(description = "WMS 库存履约状态；未接入 WMS 的订单为空")
+    private WmsStockStatus wmsStockStatus;
+
+    @Data
+    public static class WmsStockStatus {
+
+        @Schema(description = "状态：LOCKED-已锁库、RELEASED-已释放、OUTBOUNDED-已出库、MIXED-部分处理")
+        private String status;
+
+        @Schema(description = "WMS 预占明细总数")
+        private Integer totalCount;
+
+        @Schema(description = "已锁库明细数")
+        private Integer lockedCount;
+
+        @Schema(description = "已释放明细数")
+        private Integer releasedCount;
+
+        @Schema(description = "已出库明细数")
+        private Integer outboundCount;
+    }
+
 }

@@ -4,7 +4,10 @@ import cn.iocoder.yudao.module.wms.service.inventory.WmsMallInventoryService;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /** 当前阶段：商城直接使用本地 WMS 数据库的适配实现。 */
 @Component
@@ -23,6 +26,14 @@ public class ProductWmsInventoryDatabaseAdapter implements ProductWmsInventoryAd
         WmsMallInventoryService.InventorySnapshot snapshot = wmsMallInventoryService.getSnapshot(wmsSkuId, warehouseId);
         return new InventorySnapshot(snapshot.exists(), snapshot.physicalQuantity(), snapshot.lockedQuantity(),
                 snapshot.availableStock());
+    }
+
+    @Override
+    public Map<String, ReservationSummary> getReservationSummaries(Collection<String> orderNos) {
+        return wmsMallInventoryService.getReservationSummaries(orderNos).entrySet().stream().collect(Collectors.toMap(
+                Map.Entry::getKey, entry -> new ReservationSummary(entry.getValue().status(),
+                        entry.getValue().totalCount(), entry.getValue().lockedCount(), entry.getValue().releasedCount(),
+                        entry.getValue().outboundCount())));
     }
 
     @Override

@@ -61,6 +61,12 @@
               </span>
               <span>订单类型：</span>
               <dict-tag :type="DICT_TYPE.TRADE_ORDER_TYPE" :value="scope.row.type" />
+              <template v-if="scope.row.wmsStockStatus">
+                <span class="ml-20px">库存履约：</span>
+                <el-tag :type="getWmsStatusMeta(scope.row.wmsStockStatus.status).type">
+                  {{ getWmsStatusMeta(scope.row.wmsStockStatus.status).label }}
+                </el-tag>
+              </template>
             </div>
           </template>
           <template #default="{ row }">
@@ -296,6 +302,16 @@ const imagePreview = (imgUrl: string) => {
   createImageViewer({
     urlList: [imgUrl]
   })
+}
+
+const getWmsStatusMeta = (status: string) => {
+  const statusMap = {
+    LOCKED: { label: 'WMS 已锁库', type: 'warning' },
+    RELEASED: { label: 'WMS 已释放', type: 'info' },
+    OUTBOUNDED: { label: 'WMS 已出库', type: 'success' },
+    MIXED: { label: 'WMS 部分处理', type: 'danger' }
+  } as const
+  return statusMap[status as keyof typeof statusMap] || { label: status, type: 'info' as const }
 }
 </script>
 <style lang="scss" scoped>
