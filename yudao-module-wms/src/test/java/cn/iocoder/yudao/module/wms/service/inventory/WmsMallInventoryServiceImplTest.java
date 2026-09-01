@@ -6,6 +6,7 @@ import cn.iocoder.yudao.module.wms.dal.dataobject.inventory.WmsInventoryReservat
 import cn.iocoder.yudao.module.wms.dal.mysql.inventory.WmsInventoryMapper;
 import cn.iocoder.yudao.module.wms.dal.mysql.inventory.WmsInventoryReservationMapper;
 import cn.iocoder.yudao.module.wms.dal.mysql.inventory.WmsInventoryReturnMapper;
+import cn.iocoder.yudao.module.wms.dal.mysql.inventory.WmsInventoryOperationRetryMapper;
 import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.Import;
@@ -18,7 +19,7 @@ import static cn.iocoder.yudao.framework.test.core.util.AssertUtils.assertServic
 import static cn.iocoder.yudao.module.wms.enums.ErrorCodeConstants.MALL_INVENTORY_NOT_ENOUGH;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@Import(WmsMallInventoryServiceImpl.class)
+@Import({WmsMallInventoryServiceImpl.class, WmsInventoryOperationRetryServiceImpl.class})
 class WmsMallInventoryServiceImplTest extends BaseDbUnitTest {
 
     @Resource
@@ -29,6 +30,8 @@ class WmsMallInventoryServiceImplTest extends BaseDbUnitTest {
     private WmsInventoryReservationMapper reservationMapper;
     @Resource
     private WmsInventoryReturnMapper returnMapper;
+    @Resource
+    private WmsInventoryOperationRetryMapper retryMapper;
 
     @Test
     void reserveAndRelease_areIdempotent() {
@@ -75,6 +78,7 @@ class WmsMallInventoryServiceImplTest extends BaseDbUnitTest {
         assertServiceException(() -> mallInventoryService.reserve("ORDER-OVER", items), MALL_INVENTORY_NOT_ENOUGH);
         assertEquals(0L, reservationMapper.selectCount());
         assertQuantity("2", 1003L, 10L);
+        assertEquals(1L, retryMapper.selectCount());
     }
 
     @Test

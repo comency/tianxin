@@ -6,7 +6,9 @@ import cn.iocoder.yudao.module.wms.dal.dataobject.inventory.WmsInventoryReturnDO
 import cn.iocoder.yudao.module.wms.dal.mysql.inventory.WmsInventoryMapper;
 import cn.iocoder.yudao.module.wms.dal.mysql.inventory.WmsInventoryReservationMapper;
 import cn.iocoder.yudao.module.wms.dal.mysql.inventory.WmsInventoryReturnMapper;
+import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
 import jakarta.annotation.Resource;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,9 @@ public class WmsMallInventoryServiceImpl implements WmsMallInventoryService {
     private WmsInventoryReservationMapper reservationMapper;
     @Resource
     private WmsInventoryReturnMapper returnMapper;
+    @Resource
+    @Lazy
+    private WmsInventoryOperationRetryService operationRetryService;
 
     @Override
     public int getAvailableStock(Long skuId, Long warehouseId) {
@@ -72,7 +77,8 @@ public class WmsMallInventoryServiceImpl implements WmsMallInventoryService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void reserve(String orderNo, List<Item> items) {
-        for (Item item : items) {
+        try {
+            for (Item item : items) {
             WmsInventoryReservationDO reservation = reservationMapper.selectByOrderNoAndSkuIdAndWarehouseId(
                     orderNo, item.skuId(), item.warehouseId());
             if (reservation != null) {
@@ -93,13 +99,18 @@ public class WmsMallInventoryServiceImpl implements WmsMallInventoryService {
             reservationMapper.insert(new WmsInventoryReservationDO().setOrderNo(orderNo).setSkuId(item.skuId())
                     .setWarehouseId(item.warehouseId()).setQuantity(quantity(item))
                     .setStatus(WmsInventoryReservationDO.STATUS_LOCKED));
+            }
+        } catch (RuntimeException ex) {
+            recordFailure("RESERVE", orderNo, null, items, ex);
+            throw ex;
         }
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void release(String orderNo, List<Item> items) {
-        for (Item item : items) {
+        try {
+            for (Item item : items) {
             WmsInventoryReservationDO reservation = reservationMapper.selectByOrderNoAndSkuIdAndWarehouseId(
                     orderNo, item.skuId(), item.warehouseId());
             if (reservation == null || reservation.getStatus().equals(WmsInventoryReservationDO.STATUS_RELEASED)) {
@@ -115,13 +126,18 @@ public class WmsMallInventoryServiceImpl implements WmsMallInventoryService {
             }
             reservationMapper.updateById(new WmsInventoryReservationDO().setId(reservation.getId())
                     .setStatus(WmsInventoryReservationDO.STATUS_RELEASED));
+            }
+        } catch (RuntimeException ex) {
+            recordFailure("RELEASE", orderNo, null, items, ex);
+            throw ex;
         }
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void outbound(String orderNo, List<Item> items) {
-        for (Item item : items) {
+        try {
+            for (Item item : items) {
             WmsInventoryReservationDO reservation = reservationMapper.selectByOrderNoAndSkuIdAndWarehouseId(
                     orderNo, item.skuId(), item.warehouseId());
             if (reservation != null && reservation.getStatus().equals(WmsInventoryReservationDO.STATUS_OUTBOUNDED)) {
@@ -142,13 +158,18 @@ public class WmsMallInventoryServiceImpl implements WmsMallInventoryService {
                     .setQuantity(inventory.getQuantity().subtract(quantity(item))));
             reservationMapper.updateById(new WmsInventoryReservationDO().setId(reservation.getId())
                     .setStatus(WmsInventoryReservationDO.STATUS_OUTBOUNDED));
+            }
+        } catch (RuntimeException ex) {
+            recordFailure("OUTBOUND", orderNo, null, items, ex);
+            throw ex;
         }
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void inboundReturn(String returnNo, String orderNo, List<Item> items) {
-        for (Item item : items) {
+        try {
+            for (Item item : items) {
             BigDecimal returnQuantity = quantity(item);
             WmsInventoryReturnDO existing = returnMapper.selectByReturnNoAndSkuIdAndWarehouseId(
                     returnNo, item.skuId(), item.warehouseId());
@@ -175,6 +196,27 @@ public class WmsMallInventoryServiceImpl implements WmsMallInventoryService {
                     .setQuantity(inventory.getQuantity().add(returnQuantity)));
             returnMapper.insert(new WmsInventoryReturnDO().setReturnNo(returnNo).setOrderNo(orderNo)
                     .setSkuId(item.skuId()).setWarehouseId(item.warehouseId()).setQuantity(returnQuantity));
+            }
+        } catch (RuntimeException ex) {
+            recordFailure("INBOUND_RETURN", orderNo, returnNo, items, ex);
+            throw ex;
+        }
+    }
+
+    private void recordFailure(String operationType, String orderNo, String returnNo, List<Item> items,
+                               RuntimeException error) {
+        if (WmsInventoryOperationRetryContext.isRetrying()) {
+            return;
+        }
+        try {
+            List<WmsInventoryOperationRetryServiceImpl.Payload.Item> payloadItems = items.stream()
+                    .map(item -> new WmsInventoryOperationRetryServiceImpl.Payload.Item(item.skuId(), item.warehouseId(), item.count()))
+                    .toList();
+            operationRetryService.recordFailure(operationType, orderNo, returnNo,
+                    JsonUtils.toJsonString(new WmsInventoryOperationRetryServiceImpl.Payload(payloadItems)), error);
+        } catch (Exception recordException) {
+            // 记录失败不能覆盖原始库存异常，只保留日志供运维排查。
+            org.slf4j.LoggerFactory.getLogger(getClass()).error("[recordFailure][记录 WMS 补偿任务失败]", recordException);
         }
     }
 
