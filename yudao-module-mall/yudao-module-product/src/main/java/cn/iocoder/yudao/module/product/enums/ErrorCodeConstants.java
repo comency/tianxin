@@ -13,6 +13,7 @@ public interface ErrorCodeConstants {
     ErrorCode SHOP_NOT_EXISTS = new ErrorCode(1_008_009_000, "店铺不存在");
     ErrorCode SHOP_ENTERPRISE_EXISTS = new ErrorCode(1_008_009_001, "该企业已开通店铺");
     ErrorCode SHOP_DISABLED = new ErrorCode(1_008_009_002, "店铺已停用");
+    ErrorCode SHOP_MANAGER_USER_EXISTS = new ErrorCode(1_008_009_003, "该后台账号已绑定其他店铺");
 
     // ========== 商品分类相关 1-008-001-000 ============
     ErrorCode CATEGORY_NOT_EXISTS = new ErrorCode(1_008_001_000, "商品分类不存在");

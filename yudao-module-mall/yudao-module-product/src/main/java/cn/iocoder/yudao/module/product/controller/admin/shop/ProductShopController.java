@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
 
 @Tag(name = "管理后台 - 产业链企业店铺")
 @RestController
@@ -65,5 +66,12 @@ public class ProductShopController {
     @PreAuthorize("@ss.hasPermission('product:shop:query')")
     public CommonResult<List<ProductShopRespVO>> getShopList() {
         return success(BeanUtils.toBean(shopService.getShopList(), ProductShopRespVO.class));
+    }
+
+    @GetMapping("/my")
+    @Operation(summary = "获得当前后台账号负责的企业店铺")
+    @PreAuthorize("@ss.hasPermission('product:spu:query')")
+    public CommonResult<ProductShopRespVO> getMyManagedShop() {
+        return success(BeanUtils.toBean(shopService.getShopByManagerUserId(getLoginUserId()), ProductShopRespVO.class));
     }
 }

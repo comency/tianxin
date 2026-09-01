@@ -29,6 +29,9 @@ public class ProductShopSaveReqVO {
     @Schema(description = "联系电话", example = "13800138000")
     private String contactMobile;
 
+    @Schema(description = "店铺负责人（后台系统用户编号）", example = "1")
+    private Long managerUserId;
+
     @Schema(description = "店铺简介")
     private String introduction;
 

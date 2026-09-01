@@ -15,6 +15,7 @@ public class ProductShopRespVO {
     private String logoUrl;
     private String contactName;
     private String contactMobile;
+    private Long managerUserId;
     private String introduction;
     private Integer status;
     private LocalDateTime createTime;

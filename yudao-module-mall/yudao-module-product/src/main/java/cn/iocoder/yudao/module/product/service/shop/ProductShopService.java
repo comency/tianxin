@@ -15,6 +15,8 @@ public interface ProductShopService {
 
     ProductShopDO getShop(Long id);
 
+    ProductShopDO getShopByManagerUserId(Long managerUserId);
+
     List<ProductShopDO> getShopList();
 
     void validateEnabledShop(Long id);

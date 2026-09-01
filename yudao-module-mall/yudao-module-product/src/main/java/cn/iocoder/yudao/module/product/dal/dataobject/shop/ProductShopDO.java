@@ -30,6 +30,8 @@ public class ProductShopDO extends TenantBaseDO {
     private String logoUrl;
     private String contactName;
     private String contactMobile;
+    /** 店铺负责人（后台系统用户编号）。一个店铺当前绑定一名主负责人。 */
+    private Long managerUserId;
     private String introduction;
     /** {@link CommonStatusEnum} */
     private Integer status;

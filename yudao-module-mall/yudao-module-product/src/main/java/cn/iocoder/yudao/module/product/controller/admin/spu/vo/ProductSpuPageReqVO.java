@@ -51,6 +51,9 @@ public class ProductSpuPageReqVO extends PageParam {
     @Schema(description = "商品分类编号", example = "1")
     private Long categoryId;
 
+    @Schema(description = "所属企业店铺编号；为空表示全部店铺", example = "1")
+    private Long shopId;
+
     @Schema(description = "创建时间", example = "[2022-07-01 00:00:00, 2022-07-01 23:59:59]")
     @DateTimeFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND)
     private LocalDateTime[] createTime;

@@ -10,4 +10,8 @@ public interface ProductShopMapper extends BaseMapperX<ProductShopDO> {
     default ProductShopDO selectByEnterpriseId(Long enterpriseId) {
         return selectOne(ProductShopDO::getEnterpriseId, enterpriseId);
     }
+
+    default ProductShopDO selectByManagerUserId(Long managerUserId) {
+        return selectOne(ProductShopDO::getManagerUserId, managerUserId);
+    }
 }

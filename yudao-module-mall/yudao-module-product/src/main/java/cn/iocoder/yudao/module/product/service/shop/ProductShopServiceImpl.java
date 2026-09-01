@@ -24,6 +24,7 @@ public class ProductShopServiceImpl implements ProductShopService {
         if (shopMapper.selectByEnterpriseId(shop.getEnterpriseId()) != null) {
             throw exception(SHOP_ENTERPRISE_EXISTS);
         }
+        validateManagerUserId(shop.getManagerUserId(), null);
         shopMapper.insert(shop);
         // MySQL 的自增主键在当前配置下不会回填到实体，按唯一企业编号回查，保证接口始终返回真实店铺编号。
         return shop.getId() != null ? shop.getId() : shopMapper.selectByEnterpriseId(shop.getEnterpriseId()).getId();
@@ -36,6 +37,7 @@ public class ProductShopServiceImpl implements ProductShopService {
                 && shopMapper.selectByEnterpriseId(shop.getEnterpriseId()) != null) {
             throw exception(SHOP_ENTERPRISE_EXISTS);
         }
+        validateManagerUserId(shop.getManagerUserId(), shop.getId());
         shopMapper.updateById(shop);
     }
 
@@ -48,6 +50,11 @@ public class ProductShopServiceImpl implements ProductShopService {
     @Override
     public ProductShopDO getShop(Long id) {
         return shopMapper.selectById(id);
+    }
+
+    @Override
+    public ProductShopDO getShopByManagerUserId(Long managerUserId) {
+        return managerUserId == null ? null : shopMapper.selectByManagerUserId(managerUserId);
     }
 
     @Override
@@ -69,5 +76,15 @@ public class ProductShopServiceImpl implements ProductShopService {
             throw exception(SHOP_NOT_EXISTS);
         }
         return shop;
+    }
+
+    private void validateManagerUserId(Long managerUserId, Long currentShopId) {
+        if (managerUserId == null) {
+            return;
+        }
+        ProductShopDO managedShop = shopMapper.selectByManagerUserId(managerUserId);
+        if (managedShop != null && !Objects.equals(managedShop.getId(), currentShopId)) {
+            throw exception(SHOP_MANAGER_USER_EXISTS);
+        }
     }
 }

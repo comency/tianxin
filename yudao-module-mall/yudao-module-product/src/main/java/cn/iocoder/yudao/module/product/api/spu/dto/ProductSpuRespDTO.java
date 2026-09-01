@@ -19,6 +19,11 @@ public class ProductSpuRespDTO {
      */
     private Long id;
 
+    /**
+     * 所属店铺编号；为空时代表平台自营商品
+     */
+    private Long shopId;
+
     // ========== 基本信息 =========
 
     /**
