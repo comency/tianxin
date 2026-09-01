@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.wms.dal.dataobject.inventory;
 
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
+import cn.iocoder.yudao.framework.tenant.core.aop.TenantIgnore;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -17,6 +18,7 @@ import java.math.BigDecimal;
  * 以便后续替换成远程 WMS 适配器时保持相同的业务语义。
  */
 @TableName("wms_inventory_reservation")
+@TenantIgnore
 @KeySequence("wms_inventory_reservation_seq")
 @Data
 @EqualsAndHashCode(callSuper = true)

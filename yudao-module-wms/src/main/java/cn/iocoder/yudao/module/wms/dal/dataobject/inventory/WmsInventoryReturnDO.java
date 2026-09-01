@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.wms.dal.dataobject.inventory;
 
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
+import cn.iocoder.yudao.framework.tenant.core.aop.TenantIgnore;
 import com.baomidou.mybatisplus.annotation.KeySequence;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -12,6 +13,7 @@ import java.math.BigDecimal;
 
 /** 商城售后收货确认后生成的 WMS 退货入库幂等记录。 */
 @TableName("wms_inventory_return")
+@TenantIgnore
 @KeySequence("wms_inventory_return_seq")
 @Data
 @EqualsAndHashCode(callSuper = true)

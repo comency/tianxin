@@ -105,7 +105,11 @@ if errorlevel 1 (
 powershell -NoProfile -Command "if ((& '%REDIS_CLI%' -p %REDIS_PORT% ping) -eq 'PONG') { exit 0 } else { exit 1 }"
 if errorlevel 1 (
     echo [INFO] Starting local Redis on port %REDIS_PORT%...
-    start "RuoYi-Vue-Pro Redis" /B "%REDIS_SERVER%" %REDIS_START_ARGS%
+    if exist "%REDIS_CONFIG%" (
+        powershell -NoProfile -Command "Start-Process -FilePath '%REDIS_SERVER%' -ArgumentList @('%REDIS_CONFIG%') -WorkingDirectory '%ROOT%runtime\redis' -WindowStyle Hidden"
+    ) else (
+        powershell -NoProfile -Command "Start-Process -FilePath '%REDIS_SERVER%' -ArgumentList @('--port', '%REDIS_PORT%') -WorkingDirectory '%ROOT%' -WindowStyle Hidden"
+    )
     powershell -NoProfile -Command "$deadline = (Get-Date).AddSeconds(10); do { if ((& '%REDIS_CLI%' -p %REDIS_PORT% ping) -eq 'PONG') { exit 0 }; Start-Sleep -Milliseconds 500 } while ((Get-Date) -lt $deadline); exit 1"
     if errorlevel 1 (
         echo [ERROR] Redis failed to start. Review the Redis output and port %REDIS_PORT%.

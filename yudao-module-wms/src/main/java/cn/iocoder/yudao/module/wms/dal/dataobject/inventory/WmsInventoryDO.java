@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.wms.dal.dataobject.inventory;
 
 import cn.iocoder.yudao.framework.mybatis.core.dataobject.BaseDO;
+import cn.iocoder.yudao.framework.tenant.core.aop.TenantIgnore;
 import cn.iocoder.yudao.module.wms.dal.dataobject.md.item.WmsItemSkuDO;
 import cn.iocoder.yudao.module.wms.dal.dataobject.md.warehouse.WmsWarehouseDO;
 import com.baomidou.mybatisplus.annotation.KeySequence;
@@ -16,6 +17,7 @@ import java.math.BigDecimal;
  * @author 芋道源码
  */
 @TableName("wms_inventory")
+@TenantIgnore
 @KeySequence("wms_inventory_seq")
 @Data
 @EqualsAndHashCode(callSuper = true)
