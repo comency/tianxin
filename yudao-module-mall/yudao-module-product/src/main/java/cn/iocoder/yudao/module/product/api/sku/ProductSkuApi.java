@@ -2,6 +2,7 @@ package cn.iocoder.yudao.module.product.api.sku;
 
 import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuRespDTO;
 import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuUpdateStockReqDTO;
+import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuStockLockReqDTO;
 
 import java.util.Collection;
 import java.util.List;
@@ -57,5 +58,11 @@ public interface ProductSkuApi {
      * @param updateStockReqDTO 更新请求
      */
     void updateSkuStock(ProductSkuUpdateStockReqDTO updateStockReqDTO);
+
+    void reserveSkuStock(ProductSkuStockLockReqDTO reqDTO);
+
+    void releaseSkuStock(ProductSkuStockLockReqDTO reqDTO);
+
+    void outboundSkuStock(ProductSkuStockLockReqDTO reqDTO);
 
 }

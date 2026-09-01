@@ -33,6 +33,12 @@ public class ProductSkuRespVO {
     @Schema(description = "库存", requiredMode = Schema.RequiredMode.REQUIRED, example = "200")
     private Integer stock;
 
+    @Schema(description = "WMS 物料 SKU 编号")
+    private Long wmsSkuId;
+
+    @Schema(description = "WMS 仓库编号")
+    private Long wmsWarehouseId;
+
     @Schema(description = "商品重量,单位：kg 千克", example = "1.2")
     private Double weight;
 

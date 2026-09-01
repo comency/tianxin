@@ -1,5 +1,9 @@
 -- 商城现货商品使用本地 WMS 表的库存预占记录。
 -- 后续接入外部 WMS 时保留商城订单号和 SKU/仓库映射，只替换库存适配器实现。
+ALTER TABLE `product_sku`
+  ADD COLUMN `wms_sku_id` bigint NULL COMMENT 'WMS 物料 SKU 编号' AFTER `stock`,
+  ADD COLUMN `wms_warehouse_id` bigint NULL COMMENT 'WMS 仓库编号' AFTER `wms_sku_id`;
+
 CREATE TABLE IF NOT EXISTS `wms_inventory_reservation` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `order_no` varchar(64) NOT NULL COMMENT '商城履约订单号',

@@ -50,6 +50,7 @@ public interface ErrorCodeConstants {
     ErrorCode SPU_ATTR_NUMBERS_MUST_BE_EQUALS = new ErrorCode(1_008_006_002, "一个 SPU 下的每个 SKU，其属性项必须一致");
     ErrorCode SPU_SKU_NOT_DUPLICATE = new ErrorCode(1_008_006_003, "一个 SPU 下的每个 SKU，必须不重复");
     ErrorCode SKU_STOCK_NOT_ENOUGH = new ErrorCode(1_008_006_004, "商品 SKU 库存不足");
+    ErrorCode SKU_WMS_MAPPING_INVALID = new ErrorCode(1_008_006_005, "WMS 物料 SKU 和仓库编号必须同时填写");
 
     // ========== 商品 评价 1-008-007-000 ==========
     ErrorCode COMMENT_NOT_EXISTS = new ErrorCode(1_008_007_000, "商品评价不存在");

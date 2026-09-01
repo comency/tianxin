@@ -69,6 +69,14 @@ public class ProductSkuDO extends BaseDO {
      */
     private Integer stock;
     /**
+     * WMS 物料 SKU 编号。与仓库编号同时配置时，商城库存以 WMS 可售库存为准。
+     */
+    private Long wmsSkuId;
+    /**
+     * WMS 仓库编号。与物料 SKU 编号同时配置时生效。
+     */
+    private Long wmsWarehouseId;
+    /**
      * 商品重量，单位：kg 千克
      */
     private Double weight;
@@ -131,4 +139,3 @@ public class ProductSkuDO extends BaseDO {
     }
 
 }
-

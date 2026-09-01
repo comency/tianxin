@@ -17,6 +17,7 @@ import cn.iocoder.yudao.module.product.api.comment.dto.ProductCommentCreateReqDT
 import cn.iocoder.yudao.module.product.api.property.dto.ProductPropertyValueDetailRespDTO;
 import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuRespDTO;
 import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuUpdateStockReqDTO;
+import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuStockLockReqDTO;
 import cn.iocoder.yudao.module.product.api.spu.dto.ProductSpuRespDTO;
 import cn.iocoder.yudao.module.promotion.api.combination.dto.CombinationRecordCreateReqDTO;
 import cn.iocoder.yudao.module.trade.api.order.dto.TradeOrderRespDTO;
@@ -98,6 +99,12 @@ public interface TradeOrderConvert {
         List<ProductSkuUpdateStockReqDTO.Item> items = CollectionUtils.convertList(list, item ->
                 new ProductSkuUpdateStockReqDTO.Item().setId(item.getSkuId()).setIncrCount(-item.getCount()));
         return new ProductSkuUpdateStockReqDTO(items);
+    }
+
+    default ProductSkuStockLockReqDTO convertStockLock(String orderNo, List<TradeOrderItemDO> list) {
+        List<ProductSkuStockLockReqDTO.Item> items = CollectionUtils.convertList(list, item ->
+                new ProductSkuStockLockReqDTO.Item().setId(item.getSkuId()).setCount(item.getCount()));
+        return new ProductSkuStockLockReqDTO(orderNo, items);
     }
 
     default PayOrderCreateReqDTO convert(TradeOrderDO order, List<TradeOrderItemDO> orderItems,

@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.product.service.sku;
 
 import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuUpdateStockReqDTO;
+import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuStockLockReqDTO;
 import cn.iocoder.yudao.module.product.controller.admin.spu.vo.ProductSkuSaveReqVO;
 import cn.iocoder.yudao.module.product.dal.dataobject.sku.ProductSkuDO;
 
@@ -77,6 +78,15 @@ public interface ProductSkuService {
      * @param updateStockReqDTO 更行请求
      */
     void updateSkuStock(ProductSkuUpdateStockReqDTO updateStockReqDTO);
+
+    /** 下单时锁定 SKU 库存；已配置 WMS 映射的 SKU 在 WMS 中预占。 */
+    void reserveSkuStock(ProductSkuStockLockReqDTO reqDTO);
+
+    /** 订单取消或售后时释放尚未出库的 SKU 库存。 */
+    void releaseSkuStock(ProductSkuStockLockReqDTO reqDTO);
+
+    /** 发货时将已预占的 WMS 库存确认出库。 */
+    void outboundSkuStock(ProductSkuStockLockReqDTO reqDTO);
 
     /**
      * 获得商品 SKU 集合
