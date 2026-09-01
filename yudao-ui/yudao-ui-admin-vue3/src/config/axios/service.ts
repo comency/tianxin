@@ -35,6 +35,11 @@ let isRefreshToken = false
 // 请求白名单，无须 token 的接口
 const whiteList: string[] = ['/login', '/refresh-token']
 
+// 后端刚启动时，健康检查可能已通过，但商城的 Controller 还处于注册窗口。
+// 对这一条明确的临时响应短暂重试，避免首页/订单页首次打开出现无意义的报错。
+const MALL_STARTUP_RETRY_LIMIT = 8
+const MALL_STARTUP_RETRY_DELAY = 750
+
 // 创建axios实例
 const service: AxiosInstance = axios.create({
   baseURL: base_url, // api 的 base_url
@@ -146,6 +151,17 @@ service.interceptors.response.use(
     const code = data.code ?? result_code
     // 获取错误信息
     const msg = data.msg || errorCode[code] || errorCode['default']
+    const retryConfig = config as InternalAxiosRequestConfig & { mallStartupRetryCount?: number }
+    const shouldRetryMallStartup =
+      code === 501 &&
+      typeof msg === 'string' &&
+      msg.includes('[商城系统 yudao-module-mall - 已禁用]') &&
+      (retryConfig.mallStartupRetryCount || 0) < MALL_STARTUP_RETRY_LIMIT
+    if (shouldRetryMallStartup) {
+      retryConfig.mallStartupRetryCount = (retryConfig.mallStartupRetryCount || 0) + 1
+      await new Promise<void>((resolve) => window.setTimeout(resolve, MALL_STARTUP_RETRY_DELAY))
+      return service(retryConfig)
+    }
     if (ignoreMsgs.indexOf(msg) !== -1) {
       // 如果是忽略的错误码，直接返回 msg 异常
       return Promise.reject(msg)

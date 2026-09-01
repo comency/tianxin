@@ -18,6 +18,8 @@ export interface Sku {
   barCode?: string // 商品条码
   picUrl?: string // 图片地址
   stock?: number // 库存
+  wmsSkuId?: number // WMS 物料 SKU 编号
+  wmsWarehouseId?: number // WMS 仓库编号
   weight?: number // 商品重量，单位：kg 千克
   volume?: number // 商品体积，单位：m^3 平米
   firstBrokeragePrice?: number | string // 一级分销的佣金
@@ -32,6 +34,7 @@ export interface GiveCouponTemplate {
 
 export interface Spu {
   id?: number
+  shopId?: number // 所属企业店铺；为空时表示平台自营
   name?: string // 商品名称
   categoryId?: number // 商品分类
   keyword?: string // 关键字
@@ -58,6 +61,19 @@ export interface Spu {
   stock?: number // 商品库存
   createTime?: Date // 商品创建时间
   status?: number // 商品状态
+}
+
+export interface WmsStockReconciliation {
+  productSkuId: number
+  spuId: number
+  spuName?: string
+  wmsSkuId: number
+  wmsWarehouseId: number
+  cachedStock: number
+  physicalQuantity: number
+  lockedQuantity: number
+  availableStock: number
+  status: 'NORMAL' | 'CACHE_DIFFERENCE' | 'MISSING_INVENTORY'
 }
 
 // 获得 Spu 列表
@@ -108,4 +124,14 @@ export const exportSpu = async (params: any) => {
 // 获得商品 SPU 精简列表
 export const getSpuSimpleList = async () => {
   return request.get({ url: '/product/spu/list-all-simple' })
+}
+
+// 获得商城与 WMS 库存对账结果
+export const getWmsStockReconciliation = () => {
+  return request.get<WmsStockReconciliation[]>({ url: '/product/spu/wms-stock-reconciliation' })
+}
+
+// 将 WMS 可售库存同步到商城库存缓存，返回修复的 SKU 数量
+export const syncWmsStockCache = () => {
+  return request.put<number>({ url: '/product/spu/sync-wms-stock-cache' })
 }

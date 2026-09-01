@@ -15,6 +15,9 @@ public class ProductSpuSaveReqVO {
     @Schema(description = "商品编号", example = "1")
     private Long id;
 
+    @Schema(description = "所属企业店铺编号；为空表示平台自营商品", example = "1")
+    private Long shopId;
+
     @Schema(description = "商品名称", requiredMode = Schema.RequiredMode.REQUIRED, example = "清凉小短袖")
     @NotEmpty(message = "商品名称不能为空")
     private String name;

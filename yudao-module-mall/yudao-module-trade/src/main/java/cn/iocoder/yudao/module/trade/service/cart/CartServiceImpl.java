@@ -3,6 +3,8 @@ package cn.iocoder.yudao.module.trade.service.cart;
 import cn.hutool.core.collection.CollUtil;
 import cn.iocoder.yudao.module.product.api.sku.ProductSkuApi;
 import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuRespDTO;
+import cn.iocoder.yudao.module.product.api.shop.ProductShopApi;
+import cn.iocoder.yudao.module.product.api.shop.dto.ProductShopRespDTO;
 import cn.iocoder.yudao.module.product.api.spu.ProductSpuApi;
 import cn.iocoder.yudao.module.product.api.spu.dto.ProductSpuRespDTO;
 import cn.iocoder.yudao.module.trade.controller.app.cart.vo.*;
@@ -41,6 +43,8 @@ public class CartServiceImpl implements CartService {
     private ProductSpuApi productSpuApi;
     @Resource
     private ProductSkuApi productSkuApi;
+    @Resource
+    private ProductShopApi productShopApi;
 
     @Override
     public Long addCart(Long userId, AppCartAddReqVO addReqVO) {
@@ -150,7 +154,36 @@ public class CartServiceImpl implements CartService {
         deleteCartIfSpuDeleted(carts, spus);
 
         // 拼接数据
-        return TradeCartConvert.INSTANCE.convertList(carts, spus, skus);
+        AppCartListRespVO result = TradeCartConvert.INSTANCE.convertList(carts, spus, skus);
+        fillCartShopInfo(result);
+        return result;
+    }
+
+    /** 填充购物车商品的店铺信息，供会员端按店铺分组展示。 */
+    private void fillCartShopInfo(AppCartListRespVO result) {
+        Set<Long> shopIds = new HashSet<>();
+        List<AppCartListRespVO.Cart> carts = new ArrayList<>();
+        carts.addAll(result.getValidList());
+        carts.addAll(result.getInvalidList());
+        carts.forEach(cart -> {
+            if (cart.getSpu() != null && cart.getSpu().getShopId() != null && cart.getSpu().getShopId() > 0) {
+                shopIds.add(cart.getSpu().getShopId());
+            }
+        });
+        Map<Long, ProductShopRespDTO> shopMap = new HashMap<>();
+        shopIds.forEach(shopId -> shopMap.put(shopId, productShopApi.getShop(shopId)));
+        carts.forEach(cart -> {
+            if (cart.getSpu() == null) {
+                return;
+            }
+            Long shopId = cart.getSpu().getShopId();
+            if (shopId == null || shopId == 0) {
+                cart.getSpu().setShopId(0L).setShopName("平台自营");
+                return;
+            }
+            ProductShopRespDTO shop = shopMap.get(shopId);
+            cart.getSpu().setShopName(shop != null ? shop.getName() : "店铺已不可用");
+        });
     }
 
     @Override

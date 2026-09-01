@@ -26,6 +26,12 @@ public class AppTradeOrderPageItemRespVO {
     @Schema(description = "购买的商品数量", requiredMode = Schema.RequiredMode.REQUIRED, example = "10")
     private Integer productCount;
 
+    @Schema(description = "所属企业店铺编号；0 表示平台自营", example = "1")
+    private Long shopId;
+
+    @Schema(description = "下单时的店铺名称快照", example = "西北恒泰新材料有限公司")
+    private String shopName;
+
     @Schema(description = "是否评价", requiredMode = Schema.RequiredMode.REQUIRED, example = "true")
     private Boolean commentStatus;
 

@@ -2,6 +2,8 @@ package cn.iocoder.yudao.module.product.api.sku;
 
 import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuRespDTO;
 import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuUpdateStockReqDTO;
+import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuStockLockReqDTO;
+import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuStockStatusRespDTO;
 
 import java.util.Collection;
 import java.util.List;
@@ -57,5 +59,16 @@ public interface ProductSkuApi {
      * @param updateStockReqDTO 更新请求
      */
     void updateSkuStock(ProductSkuUpdateStockReqDTO updateStockReqDTO);
+
+    void reserveSkuStock(ProductSkuStockLockReqDTO reqDTO);
+
+    void releaseSkuStock(ProductSkuStockLockReqDTO reqDTO);
+
+    void outboundSkuStock(ProductSkuStockLockReqDTO reqDTO);
+
+    void inboundReturnSkuStock(String returnNo, ProductSkuStockLockReqDTO reqDTO);
+
+    /** 批量查询订单的 WMS 库存履约状态，键为商城订单号。 */
+    Map<String, ProductSkuStockStatusRespDTO> getWmsStockStatus(Collection<String> orderNos);
 
 }

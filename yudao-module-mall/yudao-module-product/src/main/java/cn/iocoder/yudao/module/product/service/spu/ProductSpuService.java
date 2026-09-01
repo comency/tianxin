@@ -110,6 +110,9 @@ public interface ProductSpuService {
      */
     void updateSpuStock(Map<Long, Integer> stockIncrCounts);
 
+    /** 对账修复时直接同步 SPU 缓存库存，不改变销量。 */
+    void syncSpuStock(Map<Long, Integer> stockCounts);
+
     /**
      * 更新 SPU 状态
      *

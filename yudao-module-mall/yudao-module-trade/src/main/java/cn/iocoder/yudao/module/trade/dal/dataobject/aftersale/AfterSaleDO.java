@@ -60,6 +60,18 @@ public class AfterSaleDO extends BaseDO {
      */
     private Long userId;
     /**
+     * 售后责任店铺编号；0 表示平台自营
+     */
+    private Long shopId;
+    /**
+     * 商家或平台售后处理人编号
+     */
+    private Long handlerUserId;
+    /**
+     * 商家审核、拒绝或退款说明
+     */
+    private String handleReason;
+    /**
      * 申请原因
      *
      * type = 退款，对应 trade_after_sale_refund_reason 类型

@@ -24,6 +24,9 @@ public class AfterSalePageReqVO extends PageParam {
     @Schema(description = "用户编号", example = "1024")
     private Long userId;
 
+    @Schema(description = "所属企业店铺编号；0 表示平台自营", example = "1")
+    private Long shopId;
+
     @Schema(description = "售后流水号", example = "202211190847450020500077")
     private String no;
 

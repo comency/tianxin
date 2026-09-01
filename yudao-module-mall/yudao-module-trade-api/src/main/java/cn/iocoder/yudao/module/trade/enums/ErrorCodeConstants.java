@@ -42,6 +42,8 @@ public interface ErrorCodeConstants {
     ErrorCode ORDER_PICK_UP_FAIL_COMBINATION_NOT_SUCCESS = new ErrorCode(1_011_000_037, "交易订单自提失败，原因：商品拼团记录不是【成功】状态");
     ErrorCode ORDER_CREATE_FAIL_INSUFFICIENT_USER_POINTS = new ErrorCode(1_011_000_038, "交易订单创建失败，原因：用户积分不足");
     ErrorCode ORDER_PICK_UP_FAIL_STATUS_NOT_UNDELIVERED = new ErrorCode(1_011_000_039, "交易订单自提失败，订单不是【待核销】状态");
+    ErrorCode ORDER_CREATE_FAIL_MULTI_SHOP = new ErrorCode(1_011_000_040, "不同店铺商品请分别结算");
+    ErrorCode ORDER_CREATE_FAIL_MULTI_SHOP_DISCOUNT = new ErrorCode(1_011_000_041, "多店铺订单暂不支持统一使用优惠券或积分抵扣，请按店铺分别结算");
 
     // ========== After Sale 模块 1-011-000-100 ==========
     ErrorCode AFTER_SALE_NOT_FOUND = new ErrorCode(1_011_000_100, "售后单不存在");
@@ -114,5 +116,13 @@ public interface ErrorCodeConstants {
     ErrorCode BROKERAGE_WITHDRAW_UPDATE_STATUS_FAIL_PAY_PRICE_NOT_MATCH = new ErrorCode(1_011_008_007, "提现单更新转账状态失败，转账单金额不匹配");
     ErrorCode BROKERAGE_WITHDRAW_UPDATE_STATUS_FAIL_PAY_MERCHANT_EXISTS = new ErrorCode(1_011_008_008, "提现单更新转账状态失败，转账单的商户订单不匹配");
     ErrorCode BROKERAGE_WITHDRAW_UPDATE_STATUS_FAIL_PAY_CHANNEL_NOT_MATCH = new ErrorCode(1_011_008_009, "提现单更新转账状态失败，转账渠道不匹配");
+
+    // ========== 店铺结算模块 1-011-009-000 ==========
+    ErrorCode SHOP_SETTLEMENT_NOT_EXISTS = new ErrorCode(1_011_009_000, "店铺结算单不存在");
+    ErrorCode SHOP_SETTLEMENT_NO_ELIGIBLE_ORDER = new ErrorCode(1_011_009_001, "所选周期内没有可结算订单");
+    ErrorCode SHOP_SETTLEMENT_STATUS_NOT_WAIT_AUDIT = new ErrorCode(1_011_009_002, "店铺结算单不是待审核状态");
+    ErrorCode SHOP_SETTLEMENT_STATUS_NOT_AUDITED = new ErrorCode(1_011_009_003, "店铺结算单不是已审核状态");
+    ErrorCode SHOP_SETTLEMENT_PERIOD_INVALID = new ErrorCode(1_011_009_004, "结算周期开始时间必须早于结束时间");
+    ErrorCode SHOP_SETTLEMENT_SHOP_NOT_EXISTS = new ErrorCode(1_011_009_005, "结算店铺不存在");
 
 }

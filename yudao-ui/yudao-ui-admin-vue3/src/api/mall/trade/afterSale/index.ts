@@ -8,6 +8,7 @@ export interface TradeAfterSaleVO {
   way?: number | null // 售后方式
   type?: number | null // 售后类型
   userId?: number | null // 用户编号
+  shopId?: number | null // 所属企业店铺编号，0 为平台自营
   applyReason?: string // 申请原因
   applyDescription?: string // 补充描述
   applyPicUrls?: string[] // 补充凭证图片

@@ -51,6 +51,10 @@ public class ProductSkuRespDTO {
      * 库存
      */
     private Integer stock;
+    /** WMS 物料 SKU 编号 */
+    private Long wmsSkuId;
+    /** WMS 仓库编号 */
+    private Long wmsWarehouseId;
     /**
      * 商品重量，单位：kg 千克
      */

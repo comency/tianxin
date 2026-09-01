@@ -91,6 +91,7 @@ const formData = ref<ProductSpuApi.Spu>({
   deliveryTypes: [], // 配送方式数组
   deliveryTemplateId: undefined, // 运费模版
   brandId: undefined, // 商品品牌
+  shopId: undefined, // 所属企业店铺
   specType: false, // 商品规格
   subCommissionType: false, // 分销类型
   skus: [

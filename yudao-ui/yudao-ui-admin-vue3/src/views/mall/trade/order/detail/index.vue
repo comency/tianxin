@@ -26,6 +26,17 @@
       <el-descriptions-item label="订单状态: ">
         <dict-tag :type="DICT_TYPE.TRADE_ORDER_STATUS" :value="formData.status!" />
       </el-descriptions-item>
+      <el-descriptions-item v-if="formData.wmsStockStatus" label="库存履约: ">
+        <el-tag :type="getWmsStatusMeta(formData.wmsStockStatus.status).type">
+          {{ getWmsStatusMeta(formData.wmsStockStatus.status).label }}
+        </el-tag>
+        <span class="ml-8px text-gray-500">
+          共 {{ formData.wmsStockStatus.totalCount }} 项，锁库
+          {{ formData.wmsStockStatus.lockedCount }}，出库
+          {{ formData.wmsStockStatus.outboundCount }}，释放
+          {{ formData.wmsStockStatus.releasedCount }}
+        </span>
+      </el-descriptions-item>
       <el-descriptions-item v-hasPermi="['trade:order:update']" label-class-name="no-colon">
         <el-button
           v-if="formData.status! === TradeOrderStatusEnum.UNPAID.status"
@@ -255,6 +266,16 @@ const getUserTypeColor = (type: number) => {
       return '#F56C6C'
   }
   return '#409EFF'
+}
+
+const getWmsStatusMeta = (status: string) => {
+  const statusMap = {
+    LOCKED: { label: 'WMS 已锁库', type: 'warning' },
+    RELEASED: { label: 'WMS 已释放', type: 'info' },
+    OUTBOUNDED: { label: 'WMS 已出库', type: 'success' },
+    MIXED: { label: 'WMS 部分处理', type: 'danger' }
+  } as const
+  return statusMap[status as keyof typeof statusMap] || { label: status, type: 'info' as const }
 }
 
 // 订单详情

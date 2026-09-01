@@ -25,12 +25,12 @@ const whiteList = [
 ]
 
 // 路由加载前
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to, from) => {
   start()
   loadStart()
   if (getAccessToken()) {
     if (to.path === '/login') {
-      next({ path: '/' })
+      return { path: '/' }
     } else {
       const dictStore = useDictStoreWithOut()
       const userStore = useUserStoreWithOut()
@@ -57,16 +57,16 @@ router.beforeEach(async (to, from, next) => {
           to.fullPath === redirect
             ? { ...to, replace: true }
             : { ...redirectLocation, replace: true }
-        next(nextData)
+        return nextData
       } else {
-        next()
+        return true
       }
     }
   } else {
     if (whiteList.indexOf(to.path) !== -1) {
-      next()
+      return true
     } else {
-      next(`/login?redirect=${encodeURIComponent(to.fullPath)}`) // 否则全部重定向到登录页
+      return `/login?redirect=${encodeURIComponent(to.fullPath)}` // 否则全部重定向到登录页
     }
   }
 })

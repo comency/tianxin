@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.iocoder.yudao.module.statistics.dal.mysql.shop.ShopOperationStatisticsMapper">
+
+    <select id="selectOperationStatistics"
+            resultType="cn.iocoder.yudao.module.statistics.controller.admin.shop.vo.ShopOperationStatisticsRespVO">
+        SELECT shop_id AS shopId,
+               MAX(shop_name) AS shopName,
+               COUNT(1) AS orderCount,
+               SUM(CASE WHEN pay_status = TRUE THEN 1 ELSE 0 END) AS paidOrderCount,
+               COALESCE(SUM(CASE WHEN pay_status = TRUE THEN pay_price ELSE 0 END), 0) AS paidAmount,
+               SUM(CASE WHEN refund_status &gt; 0 THEN 1 ELSE 0 END) AS refundOrderCount,
+               COALESCE(SUM(CASE WHEN refund_status &gt; 0 THEN refund_price ELSE 0 END), 0) AS refundAmount,
+               COALESCE((SELECT SUM(ss.settlement_amount)
+                         FROM trade_shop_settlement ss
+                         WHERE ss.shop_id = o.shop_id
+                           AND ss.status = 20
+                           AND ss.period_start_time &lt;= #{endTime}
+                           AND ss.period_end_time &gt;= #{beginTime}
+                           AND ss.deleted = FALSE), 0) AS settledAmount,
+               COALESCE(SUM(CASE WHEN pay_status = TRUE THEN pay_price ELSE 0 END), 0)
+                   - COALESCE(SUM(CASE WHEN refund_status &gt; 0 THEN refund_price ELSE 0 END), 0)
+                   - COALESCE((SELECT SUM(ss.settlement_amount)
+                               FROM trade_shop_settlement ss
+                               WHERE ss.shop_id = o.shop_id
+                                 AND ss.status = 20
+                                 AND ss.period_start_time &lt;= #{endTime}
+                                 AND ss.period_end_time &gt;= #{beginTime}
+                                 AND ss.deleted = FALSE), 0) AS unsettledAmount
+        FROM trade_order o
+        WHERE o.deleted = FALSE
+          AND o.create_time BETWEEN #{beginTime} AND #{endTime}
+          <if test="shopId != null">
+              AND o.shop_id = #{shopId}
+          </if>
+        GROUP BY o.shop_id
+        ORDER BY paidAmount DESC, o.shop_id
+    </select>
+</mapper>

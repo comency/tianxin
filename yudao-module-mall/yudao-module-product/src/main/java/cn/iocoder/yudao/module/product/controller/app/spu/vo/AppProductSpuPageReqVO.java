@@ -24,6 +24,9 @@ public class AppProductSpuPageReqVO extends PageParam {
     @Schema(description = "商品 SPU 编号数组", example = "1,3,5")
     private List<Long> ids;
 
+    @Schema(description = "所属企业店铺编号", example = "1")
+    private Long shopId;
+
     @Schema(description = "分类编号", example = "1")
     private Long categoryId;
 

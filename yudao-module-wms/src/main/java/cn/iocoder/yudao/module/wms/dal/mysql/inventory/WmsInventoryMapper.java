@@ -65,6 +65,13 @@ public interface WmsInventoryMapper extends BaseMapperX<WmsInventoryDO> {
                 WmsInventoryDO::getWarehouseId, warehouseId);
     }
 
+    default WmsInventoryDO selectBySkuIdAndWarehouseIdForUpdate(Long skuId, Long warehouseId) {
+        return selectOne(new LambdaQueryWrapperX<WmsInventoryDO>()
+                .eq(WmsInventoryDO::getSkuId, skuId)
+                .eq(WmsInventoryDO::getWarehouseId, warehouseId)
+                .last("FOR UPDATE"));
+    }
+
     default WmsInventoryDO selectByIdForUpdate(Long id) {
         return selectOne(new LambdaQueryWrapperX<WmsInventoryDO>()
                 .eq(WmsInventoryDO::getId, id)

@@ -1,5 +1,6 @@
 package cn.iocoder.yudao.module.trade.controller.app.order;
 
+import cn.hutool.core.collection.CollUtil;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.pay.api.notify.dto.PayOrderNotifyReqDTO;
@@ -33,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
 import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
 
@@ -74,8 +76,11 @@ public class AppTradeOrderController {
     @PostMapping("/create")
     @Operation(summary = "创建订单")
     public CommonResult<AppTradeOrderCreateRespVO> createOrder(@Valid @RequestBody AppTradeOrderCreateReqVO createReqVO) {
-        TradeOrderDO order = tradeOrderUpdateService.createOrder(getLoginUserId(), createReqVO);
-        return success(new AppTradeOrderCreateRespVO().setId(order.getId()).setPayOrderId(order.getPayOrderId()));
+        List<TradeOrderDO> orders = tradeOrderUpdateService.createOrders(getLoginUserId(), createReqVO);
+        TradeOrderDO firstOrder = CollUtil.getFirst(orders);
+        return success(new AppTradeOrderCreateRespVO().setId(firstOrder.getId()).setPayOrderId(firstOrder.getPayOrderId())
+                .setOrderIds(convertList(orders, TradeOrderDO::getId))
+                .setPayOrderIds(convertList(orders, TradeOrderDO::getPayOrderId)));
     }
 
     @PostMapping("/update-paid")

@@ -8,6 +8,8 @@ export interface OrderVO {
   type?: number | null // 订单类型
   terminal?: number | null // 订单来源
   userId?: number | null // 用户编号
+  shopId?: number | null // 所属企业店铺编号，0 为平台自营
+  shopName?: string // 下单时的店铺名称快照
   userIp?: string // 用户 IP
   userRemark?: string // 用户备注
   status?: number | null // 订单状态
@@ -68,6 +70,14 @@ export interface OrderVO {
   }
   // 订单操作日志
   logs?: OrderLogRespVO[]
+  // WMS 库存履约状态；未映射 WMS 的本地库存订单为空
+  wmsStockStatus?: {
+    status: 'LOCKED' | 'RELEASED' | 'OUTBOUNDED' | 'MIXED'
+    totalCount: number
+    lockedCount: number
+    releasedCount: number
+    outboundCount: number
+  }
 }
 
 export interface OrderLogRespVO {

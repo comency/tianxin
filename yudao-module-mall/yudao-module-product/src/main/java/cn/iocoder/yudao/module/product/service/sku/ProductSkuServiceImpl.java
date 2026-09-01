@@ -5,6 +5,7 @@ import cn.hutool.core.collection.ListUtil;
 import cn.hutool.core.util.ObjectUtil;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuUpdateStockReqDTO;
+import cn.iocoder.yudao.module.product.api.sku.dto.ProductSkuStockLockReqDTO;
 import cn.iocoder.yudao.module.product.controller.admin.spu.vo.ProductSkuSaveReqVO;
 import cn.iocoder.yudao.module.product.convert.sku.ProductSkuConvert;
 import cn.iocoder.yudao.module.product.dal.dataobject.property.ProductPropertyDO;
@@ -14,6 +15,8 @@ import cn.iocoder.yudao.module.product.dal.mysql.sku.ProductSkuMapper;
 import cn.iocoder.yudao.module.product.service.property.ProductPropertyService;
 import cn.iocoder.yudao.module.product.service.property.ProductPropertyValueService;
 import cn.iocoder.yudao.module.product.service.spu.ProductSpuService;
+import cn.iocoder.yudao.module.product.service.sku.adapter.ProductWmsInventoryAdapter;
+import cn.iocoder.yudao.module.product.service.sku.dto.ProductWmsStockReconciliationDTO;
 import jakarta.annotation.Resource;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -48,6 +51,8 @@ public class ProductSkuServiceImpl implements ProductSkuService {
     private ProductPropertyService productPropertyService;
     @Resource
     private ProductPropertyValueService productPropertyValueService;
+    @Resource
+    private ProductWmsInventoryAdapter productWmsInventoryAdapter;
 
     @Override
     public void deleteSku(Long id) {
@@ -65,13 +70,13 @@ public class ProductSkuServiceImpl implements ProductSkuService {
 
     @Override
     public ProductSkuDO getSku(Long id) {
-        return productSkuMapper.selectById(id);
+        return refreshWmsStock(productSkuMapper.selectById(id));
     }
 
     @Override
     public ProductSkuDO getSku(Long id, boolean includeDeleted) {
         if (includeDeleted) {
-            return productSkuMapper.selectByIdIncludeDeleted(id);
+            return refreshWmsStock(productSkuMapper.selectByIdIncludeDeleted(id));
         }
         return getSku(id);
     }
@@ -81,7 +86,7 @@ public class ProductSkuServiceImpl implements ProductSkuService {
         if (CollUtil.isEmpty(ids)) {
             return ListUtil.empty();
         }
-        return productSkuMapper.selectByIds(ids);
+        return refreshWmsStock(productSkuMapper.selectByIds(ids));
     }
 
     @Override
@@ -90,6 +95,7 @@ public class ProductSkuServiceImpl implements ProductSkuService {
         if (CollUtil.isEmpty(skus)) {
             throw exception(SKU_NOT_EXISTS);
         }
+        skus.forEach(this::validateWmsMapping);
         // 单规格，赋予单规格默认属性
         if (ObjectUtil.equal(specType, false)) {
             ProductSkuSaveReqVO skuVO = skus.get(0);
@@ -150,7 +156,7 @@ public class ProductSkuServiceImpl implements ProductSkuService {
 
     @Override
     public List<ProductSkuDO> getSkuListBySpuId(Long spuId) {
-        return productSkuMapper.selectListBySpuId(spuId);
+        return refreshWmsStock(productSkuMapper.selectListBySpuId(spuId));
     }
 
     @Override
@@ -158,7 +164,7 @@ public class ProductSkuServiceImpl implements ProductSkuService {
         if (CollUtil.isEmpty(spuIds)) {
             return Collections.emptyList();
         }
-        return productSkuMapper.selectListBySpuId(spuIds);
+        return refreshWmsStock(productSkuMapper.selectListBySpuId(spuIds));
     }
 
     @Override
@@ -273,6 +279,187 @@ public class ProductSkuServiceImpl implements ProductSkuService {
         Map<Long, Integer> spuStockIncrCounts = ProductSkuConvert.INSTANCE.convertSpuStockMap(
                 updateStockReqDTO.getItems(), skus);
         productSpuService.updateSpuStock(spuStockIncrCounts);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void reserveSkuStock(ProductSkuStockLockReqDTO reqDTO) {
+        StockFulfillment fulfillment = resolveStockFulfillment(reqDTO);
+        if (CollUtil.isNotEmpty(fulfillment.wmsItems())) {
+            productWmsInventoryAdapter.reserve(reqDTO.getOrderNo(), fulfillment.wmsItems());
+        }
+        updateLocalSkuStock(fulfillment.localItems(), -1);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void releaseSkuStock(ProductSkuStockLockReqDTO reqDTO) {
+        StockFulfillment fulfillment = resolveStockFulfillment(reqDTO);
+        if (CollUtil.isNotEmpty(fulfillment.wmsItems())) {
+            productWmsInventoryAdapter.release(reqDTO.getOrderNo(), fulfillment.wmsItems());
+        }
+        updateLocalSkuStock(fulfillment.localItems(), 1);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void outboundSkuStock(ProductSkuStockLockReqDTO reqDTO) {
+        StockFulfillment fulfillment = resolveStockFulfillment(reqDTO);
+        if (CollUtil.isNotEmpty(fulfillment.wmsItems())) {
+            productWmsInventoryAdapter.outbound(reqDTO.getOrderNo(), fulfillment.wmsItems());
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void inboundReturnSkuStock(String returnNo, ProductSkuStockLockReqDTO reqDTO) {
+        StockFulfillment fulfillment = resolveStockFulfillment(reqDTO);
+        if (CollUtil.isNotEmpty(fulfillment.wmsItems())) {
+            productWmsInventoryAdapter.inboundReturn(returnNo, reqDTO.getOrderNo(), fulfillment.wmsItems());
+        }
+    }
+
+    @Override
+    public Map<String, ProductWmsInventoryAdapter.ReservationSummary> getWmsStockStatus(Collection<String> orderNos) {
+        return productWmsInventoryAdapter.getReservationSummaries(orderNos);
+    }
+
+    @Override
+    public List<ProductWmsStockReconciliationDTO> getWmsStockReconciliation(Collection<Long> spuIds) {
+        List<ProductWmsStockReconciliationDTO> results = productSkuMapper.selectListWithWmsMapping(spuIds).stream()
+                .map(this::reconcileWmsStock)
+                .toList();
+        if (results.isEmpty()) {
+            return results;
+        }
+        Map<Long, String> spuNameMap = productSpuService.getSpuList(
+                        results.stream().map(ProductWmsStockReconciliationDTO::getSpuId).collect(Collectors.toSet()))
+                .stream().collect(Collectors.toMap(spu -> spu.getId(), spu -> spu.getName()));
+        results.forEach(item -> item.setSpuName(spuNameMap.get(item.getSpuId())));
+        return results;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int syncWmsStockCache(Collection<Long> spuIds) {
+        Set<Long> changedSpuIds = new HashSet<>();
+        int changedSkuCount = 0;
+        for (ProductSkuDO sku : productSkuMapper.selectListWithWmsMapping(spuIds)) {
+            ProductWmsInventoryAdapter.InventorySnapshot snapshot = productWmsInventoryAdapter.getSnapshot(
+                    sku.getWmsSkuId(), sku.getWmsWarehouseId());
+            // WMS 尚未建库存时不把商品库存误清零，由对账报告提示人工补齐映射或 WMS 库存。
+            if (!snapshot.exists() || Objects.equals(sku.getStock(), snapshot.availableStock())) {
+                continue;
+            }
+            productSkuMapper.updateStockCache(sku.getId(), snapshot.availableStock());
+            changedSpuIds.add(sku.getSpuId());
+            changedSkuCount++;
+        }
+        if (CollUtil.isNotEmpty(changedSpuIds)) {
+            Map<Long, Integer> spuStockCounts = new HashMap<>();
+            for (Long spuId : changedSpuIds) {
+                int stock = productSkuMapper.selectListBySpuId(spuId).stream()
+                        .map(ProductSkuDO::getStock)
+                        .filter(Objects::nonNull)
+                        .mapToInt(Integer::intValue)
+                        .sum();
+                spuStockCounts.put(spuId, stock);
+            }
+            productSpuService.syncSpuStock(spuStockCounts);
+        }
+        return changedSkuCount;
+    }
+
+    private ProductWmsStockReconciliationDTO reconcileWmsStock(ProductSkuDO sku) {
+        ProductWmsInventoryAdapter.InventorySnapshot snapshot = productWmsInventoryAdapter.getSnapshot(
+                sku.getWmsSkuId(), sku.getWmsWarehouseId());
+        String status;
+        if (!snapshot.exists()) {
+            status = ProductWmsStockReconciliationDTO.STATUS_MISSING_INVENTORY;
+        } else if (!Objects.equals(sku.getStock(), snapshot.availableStock())) {
+            status = ProductWmsStockReconciliationDTO.STATUS_CACHE_DIFFERENCE;
+        } else {
+            status = ProductWmsStockReconciliationDTO.STATUS_NORMAL;
+        }
+        return new ProductWmsStockReconciliationDTO(sku.getId(), sku.getSpuId(), null, sku.getWmsSkuId(),
+                sku.getWmsWarehouseId(), sku.getStock(), snapshot.physicalQuantity(), snapshot.lockedQuantity(),
+                snapshot.availableStock(), status);
+    }
+
+    private StockFulfillment resolveStockFulfillment(ProductSkuStockLockReqDTO reqDTO) {
+        Map<Long, Integer> skuCountMap = new LinkedHashMap<>();
+        reqDTO.getItems().forEach(item -> {
+            if (item.getCount() == null || item.getCount() <= 0) {
+                throw exception(SKU_STOCK_NOT_ENOUGH);
+            }
+            skuCountMap.merge(item.getId(), item.getCount(), Integer::sum);
+        });
+        Map<Long, ProductSkuDO> skuMap = convertMap(productSkuMapper.selectByIds(skuCountMap.keySet()), ProductSkuDO::getId);
+        if (skuMap.size() != skuCountMap.size()) {
+            throw exception(SKU_NOT_EXISTS);
+        }
+
+        List<ProductSkuStockLockReqDTO.Item> localItems = new ArrayList<>();
+        Map<WmsInventoryKey, Integer> wmsCountMap = new LinkedHashMap<>();
+        skuCountMap.forEach((skuId, count) -> {
+            ProductSkuDO sku = skuMap.get(skuId);
+            validateWmsMapping(sku);
+            if (sku.getWmsSkuId() == null) {
+                ProductSkuStockLockReqDTO.Item localItem = new ProductSkuStockLockReqDTO.Item();
+                localItem.setId(skuId).setCount(count);
+                localItems.add(localItem);
+                return;
+            }
+            wmsCountMap.merge(new WmsInventoryKey(sku.getWmsSkuId(), sku.getWmsWarehouseId()), count, Integer::sum);
+        });
+        List<ProductWmsInventoryAdapter.Item> wmsItems = wmsCountMap.entrySet().stream()
+                .map(entry -> new ProductWmsInventoryAdapter.Item(entry.getKey().wmsSkuId(),
+                        entry.getKey().warehouseId(), entry.getValue()))
+                .toList();
+        return new StockFulfillment(localItems, wmsItems);
+    }
+
+    private void updateLocalSkuStock(List<ProductSkuStockLockReqDTO.Item> localItems, int direction) {
+        if (CollUtil.isEmpty(localItems)) {
+            return;
+        }
+        List<ProductSkuUpdateStockReqDTO.Item> items = localItems.stream().map(item -> {
+            ProductSkuUpdateStockReqDTO.Item stockItem = new ProductSkuUpdateStockReqDTO.Item();
+            return stockItem.setId(item.getId()).setIncrCount(item.getCount() * direction);
+        }).toList();
+        updateSkuStock(new ProductSkuUpdateStockReqDTO(items));
+    }
+
+    private ProductSkuDO refreshWmsStock(ProductSkuDO sku) {
+        if (sku == null || sku.getWmsSkuId() == null || sku.getWmsWarehouseId() == null) {
+            return sku;
+        }
+        sku.setStock(productWmsInventoryAdapter.getAvailableStock(sku.getWmsSkuId(), sku.getWmsWarehouseId()));
+        return sku;
+    }
+
+    private List<ProductSkuDO> refreshWmsStock(List<ProductSkuDO> skus) {
+        skus.forEach(this::refreshWmsStock);
+        return skus;
+    }
+
+    private void validateWmsMapping(ProductSkuSaveReqVO sku) {
+        if ((sku.getWmsSkuId() == null) != (sku.getWmsWarehouseId() == null)) {
+            throw exception(SKU_WMS_MAPPING_INVALID);
+        }
+    }
+
+    private void validateWmsMapping(ProductSkuDO sku) {
+        if ((sku.getWmsSkuId() == null) != (sku.getWmsWarehouseId() == null)) {
+            throw exception(SKU_WMS_MAPPING_INVALID);
+        }
+    }
+
+    private record StockFulfillment(List<ProductSkuStockLockReqDTO.Item> localItems,
+                                    List<ProductWmsInventoryAdapter.Item> wmsItems) {
+    }
+
+    private record WmsInventoryKey(Long wmsSkuId, Long warehouseId) {
     }
 
 }

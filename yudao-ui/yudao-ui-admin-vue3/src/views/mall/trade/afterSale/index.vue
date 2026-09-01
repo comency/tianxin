@@ -22,6 +22,12 @@
           @keyup.enter="handleQuery"
         />
       </el-form-item>
+      <el-form-item label="所属店铺" prop="shopId">
+        <el-select v-model="queryParams.shopId" class="!w-280px" clearable placeholder="全部店铺">
+          <el-option label="平台自营" :value="0" />
+          <el-option v-for="shop in shopList" :key="shop.id" :label="shop.name" :value="shop.id!" />
+        </el-select>
+      </el-form-item>
       <el-form-item label="订单编号" prop="orderNo">
         <el-input
           v-model="queryParams.orderNo"
@@ -120,6 +126,13 @@
           </el-button>
         </template>
       </el-table-column>
+      <el-table-column align="center" label="所属店铺" min-width="160">
+        <template #default="{ row }">
+          {{
+            shopNameMap.get(row.shopId || 0) || (row.shopId ? `店铺 #${row.shopId}` : '平台自营')
+          }}
+        </template>
+      </el-table-column>
       <el-table-column label="商品信息" min-width="600" prop="spuName">
         <template #default="{ row }">
           <div class="flex items-center">
@@ -179,6 +192,7 @@ import { createImageViewer } from '@/components/ImageViewer'
 import { TabsPaneContext } from 'element-plus'
 import { cloneDeep } from 'lodash-es'
 import { fenToYuan } from '@/utils'
+import * as ProductShopApi from '@/api/mall/product/shop'
 
 defineOptions({ name: 'TradeAfterSale' })
 
@@ -198,6 +212,7 @@ const queryFormRef = ref() // 搜索的表单
 const queryParams = reactive({
   pageNo: 1,
   pageSize: 10,
+  shopId: undefined as number | undefined,
   no: null,
   status: '0',
   orderNo: null,
@@ -206,6 +221,9 @@ const queryParams = reactive({
   way: null,
   type: null
 })
+
+const shopList = ref<ProductShopApi.ShopVO[]>([])
+const shopNameMap = computed(() => new Map(shopList.value.map((shop) => [shop.id || 0, shop.name])))
 
 /** 查询列表 */
 const getList = async () => {
@@ -232,6 +250,7 @@ const handleQuery = async () => {
 /** 重置按钮操作 */
 const resetQuery = () => {
   queryFormRef.value?.resetFields()
+  queryParams.shopId = undefined
   handleQuery()
 }
 
@@ -263,6 +282,7 @@ const imagePreview = (imgUrl: string) => {
 
 onMounted(async () => {
   await getList()
+  shopList.value = await ProductShopApi.getShopList()
   // 设置 statuses 过滤
   for (const dict of getDictOptions(DICT_TYPE.TRADE_AFTER_SALE_STATUS)) {
     statusTabs.value.push({

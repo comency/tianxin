@@ -7,6 +7,7 @@ import cn.iocoder.yudao.framework.mybatis.core.query.MPJLambdaWrapperX;
 import cn.iocoder.yudao.module.trade.controller.admin.order.vo.TradeOrderPageReqVO;
 import cn.iocoder.yudao.module.trade.controller.app.order.vo.AppTradeOrderPageReqVO;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDO;
+import cn.iocoder.yudao.module.trade.enums.order.TradeOrderStatusEnum;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderTypeEnum;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import org.apache.ibatis.annotations.Mapper;
@@ -32,6 +33,7 @@ public interface TradeOrderMapper extends BaseMapperX<TradeOrderDO> {
         return selectPage(reqVO, new LambdaQueryWrapperX<TradeOrderDO>()
                 .likeIfPresent(TradeOrderDO::getNo, reqVO.getNo())
                 .eqIfPresent(TradeOrderDO::getUserId, reqVO.getUserId())
+                .eqIfPresent(TradeOrderDO::getShopId, reqVO.getShopId())
                 .eqIfPresent(TradeOrderDO::getDeliveryType, reqVO.getDeliveryType())
                 .inIfPresent(TradeOrderDO::getUserId, userIds)
                 .eqIfPresent(TradeOrderDO::getType, reqVO.getType())
@@ -53,6 +55,7 @@ public interface TradeOrderMapper extends BaseMapperX<TradeOrderDO> {
                 .selectSum(TradeOrderDO::getPayPrice, "price")  // 售后状态对应的支付金额
                 .likeIfPresent(TradeOrderDO::getNo, reqVO.getNo())
                 .eqIfPresent(TradeOrderDO::getUserId, reqVO.getUserId())
+                .eqIfPresent(TradeOrderDO::getShopId, reqVO.getShopId())
                 .eqIfPresent(TradeOrderDO::getDeliveryType, reqVO.getDeliveryType())
                 .inIfPresent(TradeOrderDO::getUserId, userIds)
                 .eqIfPresent(TradeOrderDO::getType, reqVO.getType())
@@ -127,6 +130,17 @@ public interface TradeOrderMapper extends BaseMapperX<TradeOrderDO> {
 
     default TradeOrderDO selectOneByPickUpVerifyCode(String pickUpVerifyCode) {
         return selectOne(TradeOrderDO::getPickUpVerifyCode, pickUpVerifyCode);
+    }
+
+    default List<TradeOrderDO> selectListForShopSettlement(Long shopId, LocalDateTime periodStartTime,
+                                                           LocalDateTime periodEndTime) {
+        return selectList(new LambdaQueryWrapperX<TradeOrderDO>()
+                .eq(TradeOrderDO::getShopId, shopId)
+                .eq(TradeOrderDO::getPayStatus, true)
+                .eq(TradeOrderDO::getStatus, TradeOrderStatusEnum.COMPLETED.getStatus())
+                .ge(TradeOrderDO::getFinishTime, periodStartTime)
+                .le(TradeOrderDO::getFinishTime, periodEndTime)
+                .orderByAsc(TradeOrderDO::getId));
     }
 
     default TradeOrderDO selectByUserIdAndCombinationActivityIdAndStatus(Long userId, Long combinationActivityId, Integer status) {

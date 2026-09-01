@@ -21,6 +21,12 @@
           />
         </el-select>
       </el-form-item>
+      <el-form-item v-if="!isManagedShop" label="所属店铺" prop="shopId">
+        <el-select v-model="queryParams.shopId" class="!w-280px" clearable placeholder="全部店铺">
+          <el-option label="平台自营" :value="0" />
+          <el-option v-for="shop in shopList" :key="shop.id" :label="shop.name" :value="shop.id!" />
+        </el-select>
+      </el-form-item>
       <el-form-item label="支付方式" prop="payChannelCode">
         <el-select
           v-model="queryParams.payChannelCode"
@@ -164,6 +170,48 @@
     </el-form>
   </ContentWrap>
 
+  <!-- 店铺经营概览：店铺负责人仅看到自己负责店铺的数据 -->
+  <el-row :gutter="16" class="summary">
+    <el-col :sm="6" :xs="12" v-loading="loading">
+      <SummaryCard
+        title="正常订单"
+        icon="icon-park-outline:transaction-order"
+        icon-color="bg-blue-100"
+        icon-bg-color="text-blue-500"
+        :value="summary?.orderCount || 0"
+      />
+    </el-col>
+    <el-col :sm="6" :xs="12" v-loading="loading">
+      <SummaryCard
+        title="订单金额"
+        icon="streamline:money-cash-file-dollar-common-money-currency-cash-file"
+        icon-color="bg-purple-100"
+        icon-bg-color="text-purple-500"
+        prefix="￥"
+        :decimals="2"
+        :value="Number(fenToYuan(summary?.orderPayPrice || 0))"
+      />
+    </el-col>
+    <el-col :sm="6" :xs="12" v-loading="loading">
+      <SummaryCard
+        title="待发货订单"
+        icon="ep:box"
+        icon-color="bg-orange-100"
+        icon-bg-color="text-orange-500"
+        :value="undeliveredTotal"
+      />
+    </el-col>
+    <el-col :sm="6" :xs="12" v-loading="loading">
+      <SummaryCard
+        title="退款单数"
+        icon="heroicons:receipt-refund"
+        icon-color="bg-green-100"
+        icon-bg-color="text-green-500"
+        :value="summary?.afterSaleCount || 0"
+      />
+    </el-col>
+  </el-row>
+
   <!-- 列表 -->
   <ContentWrap>
     <!-- 添加 row-key="id" 解决列数据中的 table#header 数据不刷新的问题  -->
@@ -234,7 +282,10 @@ import * as TradeOrderApi from '@/api/mall/trade/order'
 import * as PickUpStoreApi from '@/api/mall/trade/delivery/pickUpStore'
 import { DICT_TYPE, getIntDictOptions, getStrDictOptions } from '@/utils/dict'
 import * as DeliveryExpressApi from '@/api/mall/trade/delivery/express'
+import * as ProductShopApi from '@/api/mall/product/shop'
+import { fenToYuan } from '@/utils'
 import { DeliveryTypeEnum, TradeOrderStatusEnum } from '@/utils/constants'
+import SummaryCard from '@/components/SummaryCard/index.vue'
 import { OrderTableColumn } from './components'
 
 defineOptions({ name: 'TradeOrder' })
@@ -243,11 +294,14 @@ const { currentRoute, push } = useRouter() // 路由跳转
 const loading = ref(true) // 列表的加载中
 const total = ref(2) // 列表的总页数
 const list = ref<TradeOrderApi.OrderVO[]>([]) // 列表的数据
+const summary = ref<TradeOrderApi.TradeOrderSummaryRespVO>() // 店铺经营统计
+const undeliveredTotal = ref(0) // 同一筛选范围内待发货订单数量
 const queryFormRef = ref<FormInstance>() // 搜索的表单
 // 表单搜索
 const queryParams = ref({
   pageNo: 1, // 页数
   pageSize: 10, // 每页显示数量
+  shopId: undefined as number | undefined, // 所属企业店铺
   status: undefined, // 订单状态
   payChannelCode: undefined, // 支付方式
   createTime: undefined, // 创建时间
@@ -286,9 +340,22 @@ const inputChangeSelect = (val: string) => {
 const getList = async () => {
   loading.value = true
   try {
-    const data = await TradeOrderApi.getOrderPage(unref(queryParams))
+    const params = unref(queryParams)
+    const undeliveredParams = {
+      ...params,
+      pageNo: 1,
+      pageSize: 1,
+      status: TradeOrderStatusEnum.UNDELIVERED.status
+    }
+    const [summaryData, data, undeliveredData] = await Promise.all([
+      TradeOrderApi.getOrderSummary(params),
+      TradeOrderApi.getOrderPage(params),
+      TradeOrderApi.getOrderPage(undeliveredParams)
+    ])
+    summary.value = summaryData
     list.value = data.list
     total.value = data.total
+    undeliveredTotal.value = undeliveredData.total
   } finally {
     loading.value = false
   }
@@ -306,6 +373,7 @@ const resetQuery = () => {
   queryParams.value = {
     pageNo: 1, // 页数
     pageSize: 10, // 每页显示数量
+    shopId: undefined, // 所属企业店铺
     status: undefined, // 订单状态
     payChannelCode: undefined, // 支付方式
     createTime: undefined, // 创建时间
@@ -348,10 +416,21 @@ watch(
 
 const pickUpStoreList = ref<PickUpStoreApi.DeliveryPickUpStoreVO[]>([]) // 自提门店精简列表
 const deliveryExpressList = ref<DeliveryExpressApi.DeliveryExpressVO[]>([]) // 物流公司
+const shopList = ref<ProductShopApi.ShopVO[]>([]) // 企业店铺
+const managedShop = ref<ProductShopApi.ShopVO | null>(null) // 当前负责人绑定的店铺
+const isManagedShop = computed(() => !!managedShop.value)
+
 /** 初始化 **/
 onMounted(async () => {
+  managedShop.value = await ProductShopApi.getMyManagedShop()
+  if (managedShop.value?.id) {
+    queryParams.value.shopId = managedShop.value.id
+  }
   await getList()
   pickUpStoreList.value = await PickUpStoreApi.getSimpleDeliveryPickUpStoreList()
   deliveryExpressList.value = await DeliveryExpressApi.getSimpleDeliveryExpressList()
+  if (!managedShop.value) {
+    shopList.value = await ProductShopApi.getShopList()
+  }
 })
 </script>

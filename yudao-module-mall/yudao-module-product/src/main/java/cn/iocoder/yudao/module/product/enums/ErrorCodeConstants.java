@@ -9,6 +9,12 @@ import cn.iocoder.yudao.framework.common.exception.ErrorCode;
  */
 public interface ErrorCodeConstants {
 
+    // ========== 产业链店铺 1-008-009-000 ============
+    ErrorCode SHOP_NOT_EXISTS = new ErrorCode(1_008_009_000, "店铺不存在");
+    ErrorCode SHOP_ENTERPRISE_EXISTS = new ErrorCode(1_008_009_001, "该企业已开通店铺");
+    ErrorCode SHOP_DISABLED = new ErrorCode(1_008_009_002, "店铺已停用");
+    ErrorCode SHOP_MANAGER_USER_EXISTS = new ErrorCode(1_008_009_003, "该后台账号已绑定其他店铺");
+
     // ========== 商品分类相关 1-008-001-000 ============
     ErrorCode CATEGORY_NOT_EXISTS = new ErrorCode(1_008_001_000, "商品分类不存在");
     ErrorCode CATEGORY_PARENT_NOT_EXISTS = new ErrorCode(1_008_001_001, "父分类不存在");
@@ -44,6 +50,7 @@ public interface ErrorCodeConstants {
     ErrorCode SPU_ATTR_NUMBERS_MUST_BE_EQUALS = new ErrorCode(1_008_006_002, "一个 SPU 下的每个 SKU，其属性项必须一致");
     ErrorCode SPU_SKU_NOT_DUPLICATE = new ErrorCode(1_008_006_003, "一个 SPU 下的每个 SKU，必须不重复");
     ErrorCode SKU_STOCK_NOT_ENOUGH = new ErrorCode(1_008_006_004, "商品 SKU 库存不足");
+    ErrorCode SKU_WMS_MAPPING_INVALID = new ErrorCode(1_008_006_005, "WMS 物料 SKU 和仓库编号必须同时填写");
 
     // ========== 商品 评价 1-008-007-000 ==========
     ErrorCode COMMENT_NOT_EXISTS = new ErrorCode(1_008_007_000, "商品评价不存在");

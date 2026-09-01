@@ -36,6 +36,24 @@ public interface ProductSkuMapper extends BaseMapperX<ProductSkuDO> {
         delete(new LambdaQueryWrapperX<ProductSkuDO>().eq(ProductSkuDO::getSpuId, spuId));
     }
 
+    default List<ProductSkuDO> selectListWithWmsMapping(Collection<Long> spuIds) {
+        if (spuIds != null && spuIds.isEmpty()) {
+            return List.of();
+        }
+        return selectList(new LambdaQueryWrapperX<ProductSkuDO>()
+                .inIfPresent(ProductSkuDO::getSpuId, spuIds)
+                .isNotNull(ProductSkuDO::getWmsSkuId)
+                .isNotNull(ProductSkuDO::getWmsWarehouseId)
+                .orderByAsc(ProductSkuDO::getSpuId)
+                .orderByAsc(ProductSkuDO::getId));
+    }
+
+    default void updateStockCache(Long id, Integer stock) {
+        update(null, new LambdaUpdateWrapper<ProductSkuDO>()
+                .set(ProductSkuDO::getStock, stock)
+                .eq(ProductSkuDO::getId, id));
+    }
+
     /**
      * 更新 SKU 库存（增加）、销量（减少）
      *

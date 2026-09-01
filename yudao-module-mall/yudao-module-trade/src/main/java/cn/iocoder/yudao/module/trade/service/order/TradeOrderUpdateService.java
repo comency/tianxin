@@ -42,6 +42,15 @@ public interface TradeOrderUpdateService {
     TradeOrderDO createOrder(Long userId, AppTradeOrderCreateReqVO createReqVO);
 
     /**
+     * 【会员】创建交易订单。多个店铺的商品会拆分成独立订单。
+     *
+     * @param userId      登录用户
+     * @param createReqVO 创建交易订单请求模型
+     * @return 创建成功的交易订单列表
+     */
+    List<TradeOrderDO> createOrders(Long userId, AppTradeOrderCreateReqVO createReqVO);
+
+    /**
      * 更新交易订单已支付
      *
      * @param id         交易订单编号

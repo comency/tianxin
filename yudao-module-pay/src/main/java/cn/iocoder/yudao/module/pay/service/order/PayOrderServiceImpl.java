@@ -1,6 +1,7 @@
 package cn.iocoder.yudao.module.pay.service.order;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.lang.Assert;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.extra.spring.SpringUtil;
@@ -135,6 +136,11 @@ public class PayOrderServiceImpl implements PayOrderService {
                 // 退款相关字段
                 .setRefundPrice(0);
         orderMapper.insert(order);
+        // 兼容 MySQL 驱动未将自增主键回填到实体的情况，避免上游业务拿到空支付单编号。
+        if (order.getId() == null) {
+            order = orderMapper.selectByAppIdAndMerchantOrderId(app.getId(), reqDTO.getMerchantOrderId());
+            Assert.notNull(order, "支付单({}) 保存后不存在", reqDTO.getMerchantOrderId());
+        }
         return order.getId();
     }
 

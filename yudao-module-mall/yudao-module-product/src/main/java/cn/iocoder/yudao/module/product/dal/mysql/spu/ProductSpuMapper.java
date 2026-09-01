@@ -42,6 +42,7 @@ public interface ProductSpuMapper extends BaseMapperX<ProductSpuDO> {
         LambdaQueryWrapperX<ProductSpuDO> queryWrapper = new LambdaQueryWrapperX<ProductSpuDO>()
                 .likeIfPresent(ProductSpuDO::getName, reqVO.getName())
                 .eqIfPresent(ProductSpuDO::getCategoryId, reqVO.getCategoryId())
+                .eqIfPresent(ProductSpuDO::getShopId, reqVO.getShopId())
                 .betweenIfPresent(ProductSpuDO::getCreateTime, reqVO.getCreateTime())
                 .orderByDesc(ProductSpuDO::getSort)
                 .orderByDesc(ProductSpuDO::getId);
@@ -71,7 +72,8 @@ public interface ProductSpuMapper extends BaseMapperX<ProductSpuDO> {
                 // 关键字匹配，目前只匹配商品名
                 .likeIfPresent(ProductSpuDO::getName, pageReqVO.getKeyword())
                 // 分类
-                .inIfPresent(ProductSpuDO::getCategoryId, categoryIds);
+                .inIfPresent(ProductSpuDO::getCategoryId, categoryIds)
+                .eqIfPresent(ProductSpuDO::getShopId, pageReqVO.getShopId());
         // 上架状态 且有库存
         query.eq(ProductSpuDO::getStatus, ProductSpuStatusEnum.ENABLE.getStatus());
 
@@ -113,6 +115,12 @@ public interface ProductSpuMapper extends BaseMapperX<ProductSpuDO> {
                 .setSql(sql)
                 .eq(ProductSpuDO::getId, id);
         update(null, updateWrapper);
+    }
+
+    default void updateStockCache(Long id, Integer stock) {
+        update(null, new LambdaUpdateWrapper<ProductSpuDO>()
+                .set(ProductSpuDO::getStock, stock)
+                .eq(ProductSpuDO::getId, id));
     }
 
     /**
@@ -157,6 +165,7 @@ public interface ProductSpuMapper extends BaseMapperX<ProductSpuDO> {
         LambdaQueryWrapperX<ProductSpuDO> queryWrapper = new LambdaQueryWrapperX<ProductSpuDO>()
                 .likeIfPresent(ProductSpuDO::getName, reqVO.getName())
                 .eqIfPresent(ProductSpuDO::getCategoryId, reqVO.getCategoryId())
+                .eqIfPresent(ProductSpuDO::getShopId, reqVO.getShopId())
                 .betweenIfPresent(ProductSpuDO::getCreateTime, reqVO.getCreateTime());
         appendTabQuery(tabType, queryWrapper);
         return selectCount(queryWrapper);
