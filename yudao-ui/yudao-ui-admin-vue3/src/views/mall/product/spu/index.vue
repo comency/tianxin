@@ -70,6 +70,15 @@
           <Icon class="mr-5px" icon="ep:download" />
           导出
         </el-button>
+        <el-button
+          v-hasPermi="['product:spu:query']"
+          plain
+          type="warning"
+          @click="openWmsStockDialog"
+        >
+          <Icon class="mr-5px" icon="ep:box" />
+          WMS 库存对账
+        </el-button>
       </el-form-item>
     </el-form>
   </ContentWrap>
@@ -229,6 +238,49 @@
       @pagination="getList"
     />
   </ContentWrap>
+
+  <el-dialog v-model="wmsStockDialogVisible" title="WMS 库存对账" width="1050px">
+    <el-alert
+      class="mb-16px"
+      :closable="false"
+      show-icon
+      title="可售库存 = WMS 实物库存 - 已预占库存；同步只修复商城缓存，不会修改 WMS 实物库存和商品销量。"
+      type="info"
+    />
+    <el-table v-loading="wmsStockLoading" :data="wmsStockList" max-height="520">
+      <el-table-column label="商品" min-width="180" prop="spuName">
+        <template #default="{ row }">
+          <div>{{ row.spuName || '-' }}</div>
+          <div class="text-12px text-gray-400">SPU {{ row.spuId }} / SKU {{ row.productSkuId }}</div>
+        </template>
+      </el-table-column>
+      <el-table-column align="center" label="WMS SKU" min-width="100" prop="wmsSkuId" />
+      <el-table-column align="center" label="仓库" min-width="90" prop="wmsWarehouseId" />
+      <el-table-column align="center" label="商城缓存" min-width="90" prop="cachedStock" />
+      <el-table-column align="center" label="实物库存" min-width="90" prop="physicalQuantity" />
+      <el-table-column align="center" label="已预占" min-width="80" prop="lockedQuantity" />
+      <el-table-column align="center" label="可售库存" min-width="90" prop="availableStock" />
+      <el-table-column align="center" label="对账状态" min-width="120">
+        <template #default="{ row }">
+          <el-tag :type="getWmsStockStatus(row.status).type">
+            {{ getWmsStockStatus(row.status).label }}
+          </el-tag>
+        </template>
+      </el-table-column>
+    </el-table>
+    <template #footer>
+      <el-button @click="wmsStockDialogVisible = false">关闭</el-button>
+      <el-button @click="loadWmsStockReconciliation">重新对账</el-button>
+      <el-button
+        v-hasPermi="['product:spu:update']"
+        :loading="wmsStockSyncing"
+        type="primary"
+        @click="handleSyncWmsStock"
+      >
+        同步差异库存
+      </el-button>
+    </template>
+  </el-dialog>
 </template>
 <script lang="ts" setup>
 import { TabsPaneContext } from 'element-plus'
@@ -252,6 +304,10 @@ const loading = ref(false) // 列表的加载中
 const exportLoading = ref(false) // 导出的加载中
 const total = ref(0) // 列表的总页数
 const list = ref<ProductSpuApi.Spu[]>([]) // 列表的数据
+const wmsStockDialogVisible = ref(false)
+const wmsStockLoading = ref(false)
+const wmsStockSyncing = ref(false)
+const wmsStockList = ref<ProductSpuApi.WmsStockReconciliation[]>([])
 // tabs 数据
 const tabsData = ref([
   {
@@ -300,6 +356,39 @@ const getList = async () => {
     total.value = data.total
   } finally {
     loading.value = false
+  }
+}
+
+const loadWmsStockReconciliation = async () => {
+  wmsStockLoading.value = true
+  try {
+    wmsStockList.value = await ProductSpuApi.getWmsStockReconciliation()
+  } finally {
+    wmsStockLoading.value = false
+  }
+}
+
+const openWmsStockDialog = async () => {
+  wmsStockDialogVisible.value = true
+  await loadWmsStockReconciliation()
+}
+
+const getWmsStockStatus = (status: ProductSpuApi.WmsStockReconciliation['status']) => {
+  if (status === 'NORMAL') return { label: '一致', type: 'success' as const }
+  if (status === 'CACHE_DIFFERENCE') return { label: '库存差异', type: 'warning' as const }
+  return { label: 'WMS 无库存', type: 'danger' as const }
+}
+
+const handleSyncWmsStock = async () => {
+  try {
+    await message.confirm('确认使用 WMS 可售库存修复商城缓存吗？该操作不会修改 WMS 实物库存。')
+    wmsStockSyncing.value = true
+    const count = await ProductSpuApi.syncWmsStockCache()
+    message.success(`库存同步完成，共修复 ${count} 个 SKU`)
+    await Promise.all([loadWmsStockReconciliation(), getList(), getTabsCount()])
+  } catch {
+  } finally {
+    wmsStockSyncing.value = false
   }
 }
 

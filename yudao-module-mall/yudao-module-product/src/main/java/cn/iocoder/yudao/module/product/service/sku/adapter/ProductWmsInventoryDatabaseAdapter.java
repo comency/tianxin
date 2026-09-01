@@ -19,6 +19,13 @@ public class ProductWmsInventoryDatabaseAdapter implements ProductWmsInventoryAd
     }
 
     @Override
+    public InventorySnapshot getSnapshot(Long wmsSkuId, Long warehouseId) {
+        WmsMallInventoryService.InventorySnapshot snapshot = wmsMallInventoryService.getSnapshot(wmsSkuId, warehouseId);
+        return new InventorySnapshot(snapshot.exists(), snapshot.physicalQuantity(), snapshot.lockedQuantity(),
+                snapshot.availableStock());
+    }
+
+    @Override
     public void reserve(String orderNo, List<Item> items) {
         wmsMallInventoryService.reserve(orderNo, convert(items));
     }

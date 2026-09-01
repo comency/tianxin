@@ -30,12 +30,19 @@ public class WmsMallInventoryServiceImpl implements WmsMallInventoryService {
 
     @Override
     public int getAvailableStock(Long skuId, Long warehouseId) {
+        return getSnapshot(skuId, warehouseId).availableStock();
+    }
+
+    @Override
+    public InventorySnapshot getSnapshot(Long skuId, Long warehouseId) {
         WmsInventoryDO inventory = inventoryMapper.selectBySkuIdAndWarehouseId(skuId, warehouseId);
         if (inventory == null) {
-            return 0;
+            return new InventorySnapshot(false, BigDecimal.ZERO, BigDecimal.ZERO, 0);
         }
         BigDecimal locked = reservationMapper.selectLockedQuantity(skuId, warehouseId);
-        return inventory.getQuantity().subtract(locked).max(BigDecimal.ZERO).setScale(0, RoundingMode.DOWN).intValue();
+        int availableStock = inventory.getQuantity().subtract(locked).max(BigDecimal.ZERO)
+                .setScale(0, RoundingMode.DOWN).intValue();
+        return new InventorySnapshot(true, inventory.getQuantity(), locked, availableStock);
     }
 
     @Override

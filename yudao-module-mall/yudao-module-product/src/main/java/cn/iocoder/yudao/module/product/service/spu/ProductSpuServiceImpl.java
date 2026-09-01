@@ -258,6 +258,11 @@ public class ProductSpuServiceImpl implements ProductSpuService {
     }
 
     @Override
+    public void syncSpuStock(Map<Long, Integer> stockCounts) {
+        stockCounts.forEach(productSpuMapper::updateStockCache);
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public void updateSpuStatus(ProductSpuUpdateStatusReqVO updateReqVO) {
         // 校验存在

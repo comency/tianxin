@@ -12,6 +12,7 @@ import cn.iocoder.yudao.module.product.dal.dataobject.spu.ProductSpuDO;
 import cn.iocoder.yudao.module.product.dal.dataobject.shop.ProductShopDO;
 import cn.iocoder.yudao.module.product.enums.spu.ProductSpuStatusEnum;
 import cn.iocoder.yudao.module.product.service.sku.ProductSkuService;
+import cn.iocoder.yudao.module.product.service.sku.dto.ProductWmsStockReconciliationDTO;
 import cn.iocoder.yudao.module.product.service.shop.ProductShopService;
 import cn.iocoder.yudao.module.product.service.spu.ProductSpuService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -154,6 +155,20 @@ public class ProductSpuController {
         return success(productSpuService.getTabsCount(reqVO));
     }
 
+    @GetMapping("/wms-stock-reconciliation")
+    @Operation(summary = "获得商城商品与 WMS 的库存对账结果")
+    @PreAuthorize("@ss.hasPermission('product:spu:query')")
+    public CommonResult<List<ProductWmsStockReconciliationDTO>> getWmsStockReconciliation() {
+        return success(productSkuService.getWmsStockReconciliation(getManagedSpuScope()));
+    }
+
+    @PutMapping("/sync-wms-stock-cache")
+    @Operation(summary = "将 WMS 可售库存同步到商城商品缓存")
+    @PreAuthorize("@ss.hasPermission('product:spu:update')")
+    public CommonResult<Integer> syncWmsStockCache() {
+        return success(productSkuService.syncWmsStockCache(getManagedSpuScope()));
+    }
+
     @GetMapping("/export-excel")
     @Operation(summary = "导出商品")
     @PreAuthorize("@ss.hasPermission('product:spu:export')")
@@ -184,6 +199,18 @@ public class ProductSpuController {
 
     private ProductShopDO getManagedShop() {
         return productShopService.getShopByManagerUserId(getLoginUserId());
+    }
+
+    /** null 表示平台管理员可查看全部；空集合表示商家当前没有商品。 */
+    private Collection<Long> getManagedSpuScope() {
+        ProductShopDO managedShop = getManagedShop();
+        if (managedShop == null) {
+            return null;
+        }
+        ProductSpuPageReqVO reqVO = new ProductSpuPageReqVO();
+        reqVO.setShopId(managedShop.getId());
+        reqVO.setPageSize(PAGE_SIZE_NONE);
+        return convertSpuIds(productSpuService.getSpuPage(reqVO).getList());
     }
 
     private static Collection<Long> convertSpuIds(List<ProductSpuDO> spus) {

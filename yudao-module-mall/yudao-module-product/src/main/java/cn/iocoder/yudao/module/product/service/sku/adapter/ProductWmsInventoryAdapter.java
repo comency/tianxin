@@ -1,5 +1,6 @@
 package cn.iocoder.yudao.module.product.service.sku.adapter;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -11,6 +12,8 @@ public interface ProductWmsInventoryAdapter {
 
     int getAvailableStock(Long wmsSkuId, Long warehouseId);
 
+    InventorySnapshot getSnapshot(Long wmsSkuId, Long warehouseId);
+
     void reserve(String orderNo, List<Item> items);
 
     void release(String orderNo, List<Item> items);
@@ -20,5 +23,9 @@ public interface ProductWmsInventoryAdapter {
     void inboundReturn(String returnNo, String orderNo, List<Item> items);
 
     record Item(Long wmsSkuId, Long warehouseId, Integer count) {
+    }
+
+    record InventorySnapshot(boolean exists, BigDecimal physicalQuantity, BigDecimal lockedQuantity,
+                             int availableStock) {
     }
 }

@@ -117,6 +117,12 @@ public interface ProductSpuMapper extends BaseMapperX<ProductSpuDO> {
         update(null, updateWrapper);
     }
 
+    default void updateStockCache(Long id, Integer stock) {
+        update(null, new LambdaUpdateWrapper<ProductSpuDO>()
+                .set(ProductSpuDO::getStock, stock)
+                .eq(ProductSpuDO::getId, id));
+    }
+
     /**
      * 添加后台 Tab 选项的查询条件
      *

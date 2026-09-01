@@ -63,6 +63,19 @@ export interface Spu {
   status?: number // 商品状态
 }
 
+export interface WmsStockReconciliation {
+  productSkuId: number
+  spuId: number
+  spuName?: string
+  wmsSkuId: number
+  wmsWarehouseId: number
+  cachedStock: number
+  physicalQuantity: number
+  lockedQuantity: number
+  availableStock: number
+  status: 'NORMAL' | 'CACHE_DIFFERENCE' | 'MISSING_INVENTORY'
+}
+
 // 获得 Spu 列表
 export const getSpuPage = (params: PageParam) => {
   return request.get({ url: '/product/spu/page', params })
@@ -111,4 +124,14 @@ export const exportSpu = async (params: any) => {
 // 获得商品 SPU 精简列表
 export const getSpuSimpleList = async () => {
   return request.get({ url: '/product/spu/list-all-simple' })
+}
+
+// 获得商城与 WMS 库存对账结果
+export const getWmsStockReconciliation = () => {
+  return request.get<WmsStockReconciliation[]>({ url: '/product/spu/wms-stock-reconciliation' })
+}
+
+// 将 WMS 可售库存同步到商城库存缓存，返回修复的 SKU 数量
+export const syncWmsStockCache = () => {
+  return request.put<number>({ url: '/product/spu/sync-wms-stock-cache' })
 }

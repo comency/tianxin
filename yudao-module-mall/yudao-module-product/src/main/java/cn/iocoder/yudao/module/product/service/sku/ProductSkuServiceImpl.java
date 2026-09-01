@@ -16,6 +16,7 @@ import cn.iocoder.yudao.module.product.service.property.ProductPropertyService;
 import cn.iocoder.yudao.module.product.service.property.ProductPropertyValueService;
 import cn.iocoder.yudao.module.product.service.spu.ProductSpuService;
 import cn.iocoder.yudao.module.product.service.sku.adapter.ProductWmsInventoryAdapter;
+import cn.iocoder.yudao.module.product.service.sku.dto.ProductWmsStockReconciliationDTO;
 import jakarta.annotation.Resource;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
@@ -316,6 +317,68 @@ public class ProductSkuServiceImpl implements ProductSkuService {
         if (CollUtil.isNotEmpty(fulfillment.wmsItems())) {
             productWmsInventoryAdapter.inboundReturn(returnNo, reqDTO.getOrderNo(), fulfillment.wmsItems());
         }
+    }
+
+    @Override
+    public List<ProductWmsStockReconciliationDTO> getWmsStockReconciliation(Collection<Long> spuIds) {
+        List<ProductWmsStockReconciliationDTO> results = productSkuMapper.selectListWithWmsMapping(spuIds).stream()
+                .map(this::reconcileWmsStock)
+                .toList();
+        if (results.isEmpty()) {
+            return results;
+        }
+        Map<Long, String> spuNameMap = productSpuService.getSpuList(
+                        results.stream().map(ProductWmsStockReconciliationDTO::getSpuId).collect(Collectors.toSet()))
+                .stream().collect(Collectors.toMap(spu -> spu.getId(), spu -> spu.getName()));
+        results.forEach(item -> item.setSpuName(spuNameMap.get(item.getSpuId())));
+        return results;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public int syncWmsStockCache(Collection<Long> spuIds) {
+        Set<Long> changedSpuIds = new HashSet<>();
+        int changedSkuCount = 0;
+        for (ProductSkuDO sku : productSkuMapper.selectListWithWmsMapping(spuIds)) {
+            ProductWmsInventoryAdapter.InventorySnapshot snapshot = productWmsInventoryAdapter.getSnapshot(
+                    sku.getWmsSkuId(), sku.getWmsWarehouseId());
+            // WMS 尚未建库存时不把商品库存误清零，由对账报告提示人工补齐映射或 WMS 库存。
+            if (!snapshot.exists() || Objects.equals(sku.getStock(), snapshot.availableStock())) {
+                continue;
+            }
+            productSkuMapper.updateStockCache(sku.getId(), snapshot.availableStock());
+            changedSpuIds.add(sku.getSpuId());
+            changedSkuCount++;
+        }
+        if (CollUtil.isNotEmpty(changedSpuIds)) {
+            Map<Long, Integer> spuStockCounts = new HashMap<>();
+            for (Long spuId : changedSpuIds) {
+                int stock = productSkuMapper.selectListBySpuId(spuId).stream()
+                        .map(ProductSkuDO::getStock)
+                        .filter(Objects::nonNull)
+                        .mapToInt(Integer::intValue)
+                        .sum();
+                spuStockCounts.put(spuId, stock);
+            }
+            productSpuService.syncSpuStock(spuStockCounts);
+        }
+        return changedSkuCount;
+    }
+
+    private ProductWmsStockReconciliationDTO reconcileWmsStock(ProductSkuDO sku) {
+        ProductWmsInventoryAdapter.InventorySnapshot snapshot = productWmsInventoryAdapter.getSnapshot(
+                sku.getWmsSkuId(), sku.getWmsWarehouseId());
+        String status;
+        if (!snapshot.exists()) {
+            status = ProductWmsStockReconciliationDTO.STATUS_MISSING_INVENTORY;
+        } else if (!Objects.equals(sku.getStock(), snapshot.availableStock())) {
+            status = ProductWmsStockReconciliationDTO.STATUS_CACHE_DIFFERENCE;
+        } else {
+            status = ProductWmsStockReconciliationDTO.STATUS_NORMAL;
+        }
+        return new ProductWmsStockReconciliationDTO(sku.getId(), sku.getSpuId(), null, sku.getWmsSkuId(),
+                sku.getWmsWarehouseId(), sku.getStock(), snapshot.physicalQuantity(), snapshot.lockedQuantity(),
+                snapshot.availableStock(), status);
     }
 
     private StockFulfillment resolveStockFulfillment(ProductSkuStockLockReqDTO reqDTO) {

@@ -1,5 +1,6 @@
 package cn.iocoder.yudao.module.wms.service.inventory;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -11,6 +12,9 @@ public interface WmsMallInventoryService {
 
     int getAvailableStock(Long skuId, Long warehouseId);
 
+    /** 获取商城对账所需的 WMS 库存快照。 */
+    InventorySnapshot getSnapshot(Long skuId, Long warehouseId);
+
     void reserve(String orderNo, List<Item> items);
 
     void release(String orderNo, List<Item> items);
@@ -21,5 +25,9 @@ public interface WmsMallInventoryService {
     void inboundReturn(String returnNo, String orderNo, List<Item> items);
 
     record Item(Long skuId, Long warehouseId, Integer count) {
+    }
+
+    record InventorySnapshot(boolean exists, BigDecimal physicalQuantity, BigDecimal lockedQuantity,
+                             int availableStock) {
     }
 }
