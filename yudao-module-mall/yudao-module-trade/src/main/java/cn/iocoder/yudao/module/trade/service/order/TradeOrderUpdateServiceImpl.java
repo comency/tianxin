@@ -25,6 +25,10 @@ import cn.iocoder.yudao.module.pay.enums.order.PayOrderStatusEnum;
 import cn.iocoder.yudao.module.pay.enums.refund.PayRefundStatusEnum;
 import cn.iocoder.yudao.module.product.api.comment.ProductCommentApi;
 import cn.iocoder.yudao.module.product.api.comment.dto.ProductCommentCreateReqDTO;
+import cn.iocoder.yudao.module.product.api.shop.ProductShopApi;
+import cn.iocoder.yudao.module.product.api.shop.dto.ProductShopRespDTO;
+import cn.iocoder.yudao.module.product.api.spu.ProductSpuApi;
+import cn.iocoder.yudao.module.product.api.spu.dto.ProductSpuRespDTO;
 import cn.iocoder.yudao.module.promotion.api.combination.CombinationRecordApi;
 import cn.iocoder.yudao.module.promotion.api.combination.dto.CombinationRecordRespDTO;
 import cn.iocoder.yudao.module.promotion.enums.combination.CombinationRecordStatusEnum;
@@ -71,7 +75,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -120,6 +126,10 @@ public class TradeOrderUpdateServiceImpl implements TradeOrderUpdateService {
     private MemberAddressApi addressApi;
     @Resource
     private ProductCommentApi productCommentApi;
+    @Resource
+    private ProductSpuApi productSpuApi;
+    @Resource
+    private ProductShopApi productShopApi;
     @Resource
     public SocialClientApi socialClientApi;
     @Resource
@@ -184,23 +194,131 @@ public class TradeOrderUpdateServiceImpl implements TradeOrderUpdateService {
     @Transactional(rollbackFor = Exception.class)
     @TradeOrderLog(operateType = TradeOrderOperateTypeEnum.MEMBER_CREATE)
     public TradeOrderDO createOrder(Long userId, AppTradeOrderCreateReqVO createReqVO) {
-        // 1.1 价格计算
-        TradePriceCalculateRespBO calculateRespBO = calculatePrice(userId, createReqVO);
-        // 1.2 构建订单
+        return CollUtil.getFirst(createOrders(userId, createReqVO));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    @TradeOrderLog(operateType = TradeOrderOperateTypeEnum.MEMBER_CREATE)
+    public List<TradeOrderDO> createOrders(Long userId, AppTradeOrderCreateReqVO createReqVO) {
+        // 1. 先解析结算商品的店铺归属。购物车下单时，SKU 信息由价格计算结果提供。
+        TradePriceCalculateRespBO initialCalculateRespBO = calculatePrice(userId, createReqVO);
+        Map<Long, List<AppTradeOrderSettlementReqVO.Item>> shopItems = groupCreateItemsByShop(
+                createReqVO.getItems(), initialCalculateRespBO.getItems());
+        if (shopItems.size() == 1) {
+            return CollUtil.newArrayList(createOrder0(userId, createReqVO, initialCalculateRespBO));
+        }
+
+        // 跨店铺订单不能把一张优惠券、一次积分抵扣拆分给多笔订单，否则优惠核销和金额分摊会不一致。
+        if (ObjUtil.isNotEmpty(createReqVO.getCouponId()) || Boolean.TRUE.equals(createReqVO.getPointStatus())) {
+            throw exception(ORDER_CREATE_FAIL_MULTI_SHOP_DISCOUNT);
+        }
+
+        // 2. 每个店铺独立重新计价、扣减库存、生成订单和支付单；整个过程位于同一个事务内。
+        List<TradeOrderDO> orders = new ArrayList<>(shopItems.size());
+        for (List<AppTradeOrderSettlementReqVO.Item> items : shopItems.values()) {
+            AppTradeOrderCreateReqVO shopCreateReqVO = JsonUtils.parseObject(JsonUtils.toJsonString(createReqVO),
+                    AppTradeOrderCreateReqVO.class);
+            shopCreateReqVO.setItems(items);
+            shopCreateReqVO.setCouponId(null);
+            shopCreateReqVO.setPointStatus(false);
+            TradePriceCalculateRespBO calculateRespBO = calculatePrice(userId, shopCreateReqVO);
+            orders.add(createOrder0(userId, shopCreateReqVO, calculateRespBO));
+        }
+        return orders;
+    }
+
+    /**
+     * 创建一笔单店订单。
+     */
+    private TradeOrderDO createOrder0(Long userId, AppTradeOrderCreateReqVO createReqVO,
+                                      TradePriceCalculateRespBO calculateRespBO) {
+        // 1. 构建订单
         TradeOrderDO order = buildTradeOrder(userId, createReqVO, calculateRespBO);
         List<TradeOrderItemDO> orderItems = buildTradeOrderItems(order, calculateRespBO);
+        fillOrderShopSnapshot(order, orderItems);
 
         // 2. 订单创建前的逻辑
         tradeOrderHandlers.forEach(handler -> handler.beforeOrderCreate(order, orderItems));
 
         // 3. 保存订单
         tradeOrderMapper.insert(order);
+        // 某些 MySQL 驱动/批处理配置不会将自增主键回填到实体，导致后续订单明细缺少 order_id。
+        // 订单流水号在当前事务内已生成，回查一次即可兼容该情况。
+        if (order.getId() == null) {
+            TradeOrderDO persistedOrder = tradeOrderMapper.selectOne(TradeOrderDO::getNo, order.getNo());
+            Assert.notNull(persistedOrder, "订单({}) 保存后不存在", order.getNo());
+            order.setId(persistedOrder.getId());
+        }
         orderItems.forEach(orderItem -> orderItem.setOrderId(order.getId()));
         tradeOrderItemMapper.insertBatch(orderItems);
 
         // 4. 订单创建后的逻辑
         afterCreateTradeOrder(order, orderItems, createReqVO);
         return order;
+    }
+
+    /**
+     * 按店铺对本次创建订单的商品项分组。使用价格计算结果的 SPU，兼容直接购买和购物车购买两种入口。
+     */
+    private Map<Long, List<AppTradeOrderSettlementReqVO.Item>> groupCreateItemsByShop(
+            List<AppTradeOrderSettlementReqVO.Item> createItems,
+            List<TradePriceCalculateRespBO.OrderItem> calculateItems) {
+        Map<Long, ProductSpuRespDTO> spus = productSpuApi.getSpuMap(
+                convertSet(calculateItems, TradePriceCalculateRespBO.OrderItem::getSpuId));
+        Map<Long, List<AppTradeOrderSettlementReqVO.Item>> result = new LinkedHashMap<>();
+        for (TradePriceCalculateRespBO.OrderItem calculateItem : calculateItems) {
+            ProductSpuRespDTO spu = spus.get(calculateItem.getSpuId());
+            Assert.notNull(spu, "商品({}) 不存在", calculateItem.getSpuId());
+            AppTradeOrderSettlementReqVO.Item createItem = findCreateItem(createItems, calculateItem);
+            Assert.notNull(createItem, "商品({}) 的下单参数不存在", calculateItem.getSkuId());
+            Long shopId = ObjectUtil.defaultIfNull(spu.getShopId(), 0L);
+            result.computeIfAbsent(shopId, key -> new ArrayList<>()).add(createItem);
+        }
+        return result;
+    }
+
+    private AppTradeOrderSettlementReqVO.Item findCreateItem(List<AppTradeOrderSettlementReqVO.Item> createItems,
+                                                               TradePriceCalculateRespBO.OrderItem calculateItem) {
+        for (AppTradeOrderSettlementReqVO.Item createItem : createItems) {
+            if (calculateItem.getCartId() != null && ObjectUtil.equal(createItem.getCartId(), calculateItem.getCartId())) {
+                return createItem;
+            }
+            if (calculateItem.getCartId() == null && ObjectUtil.equal(createItem.getSkuId(), calculateItem.getSkuId())) {
+                return createItem;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 写入下单时的店铺快照。
+     *
+     * 每笔履约订单只保存一个店铺快照；跨店商品会在 {@link #createOrders(Long, AppTradeOrderCreateReqVO)} 中提前拆分。
+     */
+    private void fillOrderShopSnapshot(TradeOrderDO order, List<TradeOrderItemDO> orderItems) {
+        Map<Long, ProductSpuRespDTO> spus = productSpuApi.getSpuMap(
+                convertSet(orderItems, TradeOrderItemDO::getSpuId));
+        Set<Long> shopIds = new java.util.HashSet<>();
+        for (TradeOrderItemDO item : orderItems) {
+            ProductSpuRespDTO spu = spus.get(item.getSpuId());
+            Assert.notNull(spu, "商品({}) 不存在", item.getSpuId());
+            Long shopId = ObjectUtil.defaultIfNull(spu.getShopId(), 0L);
+            item.setShopId(shopId);
+            shopIds.add(shopId);
+        }
+        Assert.isTrue(shopIds.size() == 1, "订单商品必须属于同一店铺");
+
+        Long shopId = CollUtil.getFirst(shopIds);
+        order.setShopId(shopId);
+        if (ObjectUtil.equal(shopId, 0L)) {
+            order.setShopName("平台自营").setShopLogoUrl(null);
+            return;
+        }
+        ProductShopRespDTO shop = productShopApi.getShop(shopId);
+        Assert.notNull(shop, "店铺({}) 不存在", shopId);
+        order.setShopName(shop.getName()).setShopLogoUrl(shop.getLogoUrl())
+                .setSellerUserId(shop.getManagerUserId());
     }
 
     private TradeOrderDO buildTradeOrder(Long userId, AppTradeOrderCreateReqVO createReqVO,

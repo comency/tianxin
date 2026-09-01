@@ -41,6 +41,10 @@ public class TradeOrderItemDO extends BaseDO {
      */
     private Long orderId;
     /**
+     * 履约店铺编号；冗余订单店铺归属，便于商家明细查询
+     */
+    private Long shopId;
+    /**
      * 购物车项编号
      *
      * 关联 {@link CartDO#getId()}
@@ -208,4 +212,3 @@ public class TradeOrderItemDO extends BaseDO {
     }
 
 }
-

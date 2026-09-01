@@ -32,6 +32,12 @@ public class TradeOrderBaseVO {
     @Schema(description = "用户编号", requiredMode = Schema.RequiredMode.REQUIRED, example = "2048")
     private Long userId;
 
+    @Schema(description = "所属企业店铺编号；0 表示平台自营", example = "1")
+    private Long shopId;
+
+    @Schema(description = "下单时的店铺名称快照", example = "西北恒泰新材料有限公司")
+    private String shopName;
+
     @Schema(description = "用户 IP", requiredMode = Schema.RequiredMode.REQUIRED, example = "127.0.0.1")
     private String userIp;
 

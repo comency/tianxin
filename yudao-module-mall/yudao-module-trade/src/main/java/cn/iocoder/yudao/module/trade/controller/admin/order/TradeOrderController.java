@@ -5,6 +5,8 @@ import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.member.api.user.MemberUserApi;
 import cn.iocoder.yudao.module.member.api.user.dto.MemberUserRespDTO;
+import cn.iocoder.yudao.module.product.api.shop.ProductShopApi;
+import cn.iocoder.yudao.module.product.api.shop.dto.ProductShopRespDTO;
 import cn.iocoder.yudao.module.trade.controller.admin.order.vo.*;
 import cn.iocoder.yudao.module.trade.convert.order.TradeOrderConvert;
 import cn.iocoder.yudao.module.trade.dal.dataobject.order.TradeOrderDO;
@@ -28,6 +30,8 @@ import java.util.Objects;
 import java.util.Set;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static cn.iocoder.yudao.framework.common.exception.enums.GlobalErrorCodeConstants.FORBIDDEN;
+import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertList;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
 import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
@@ -48,11 +52,14 @@ public class TradeOrderController {
 
     @Resource
     private MemberUserApi memberUserApi;
+    @Resource
+    private ProductShopApi productShopApi;
 
     @GetMapping("/page")
     @Operation(summary = "获得交易订单分页")
     @PreAuthorize("@ss.hasPermission('trade:order:query')")
     public CommonResult<PageResult<TradeOrderPageItemRespVO>> getOrderPage(TradeOrderPageReqVO reqVO) {
+        applyManagedShopScope(reqVO);
         // 查询订单
         PageResult<TradeOrderDO> pageResult = tradeOrderQueryService.getOrderPage(reqVO);
         if (CollUtil.isEmpty(pageResult.getList())) {
@@ -74,6 +81,7 @@ public class TradeOrderController {
     @Operation(summary = "获得交易订单统计")
     @PreAuthorize("@ss.hasPermission('trade:order:query')")
     public CommonResult<TradeOrderSummaryRespVO> getOrderSummary(TradeOrderPageReqVO reqVO) {
+        applyManagedShopScope(reqVO);
         return success(tradeOrderQueryService.getOrderSummary(reqVO));
     }
 
@@ -87,6 +95,7 @@ public class TradeOrderController {
         if (order == null) {
             return success(null);
         }
+        validateManagedOrder(order);
         // 查询订单项
         List<TradeOrderItemDO> orderItems = tradeOrderQueryService.getOrderItemListByOrderId(id);
 
@@ -103,6 +112,7 @@ public class TradeOrderController {
     @Parameter(name = "id", description = "交易订单编号")
     @PreAuthorize("@ss.hasPermission('trade:order:query')")
     public CommonResult<List<?>> getOrderExpressTrackList(@RequestParam("id") Long id) {
+        validateManagedOrder(tradeOrderQueryService.getOrder(id));
         return success(TradeOrderConvert.INSTANCE.convertList02(
                 tradeOrderQueryService.getExpressTrackList(id)));
     }
@@ -111,6 +121,7 @@ public class TradeOrderController {
     @Operation(summary = "订单发货")
     @PreAuthorize("@ss.hasPermission('trade:order:update')")
     public CommonResult<Boolean> deliveryOrder(@RequestBody TradeOrderDeliveryReqVO deliveryReqVO) {
+        validateManagedOrder(tradeOrderQueryService.getOrder(deliveryReqVO.getId()));
         tradeOrderUpdateService.deliveryOrder(deliveryReqVO);
         return success(true);
     }
@@ -119,6 +130,7 @@ public class TradeOrderController {
     @Operation(summary = "订单备注")
     @PreAuthorize("@ss.hasPermission('trade:order:update')")
     public CommonResult<Boolean> updateOrderRemark(@RequestBody TradeOrderRemarkReqVO reqVO) {
+        validateManagedOrder(tradeOrderQueryService.getOrder(reqVO.getId()));
         tradeOrderUpdateService.updateOrderRemark(reqVO);
         return success(true);
     }
@@ -127,6 +139,7 @@ public class TradeOrderController {
     @Operation(summary = "订单调价")
     @PreAuthorize("@ss.hasPermission('trade:order:update')")
     public CommonResult<Boolean> updateOrderPrice(@RequestBody TradeOrderUpdatePriceReqVO reqVO) {
+        validateManagedOrder(tradeOrderQueryService.getOrder(reqVO.getId()));
         tradeOrderUpdateService.updateOrderPrice(reqVO);
         return success(true);
     }
@@ -135,6 +148,7 @@ public class TradeOrderController {
     @Operation(summary = "修改订单收货地址")
     @PreAuthorize("@ss.hasPermission('trade:order:update')")
     public CommonResult<Boolean> updateOrderAddress(@RequestBody TradeOrderUpdateAddressReqVO reqVO) {
+        validateManagedOrder(tradeOrderQueryService.getOrder(reqVO.getId()));
         tradeOrderUpdateService.updateOrderAddress(reqVO);
         return success(true);
     }
@@ -144,6 +158,7 @@ public class TradeOrderController {
     @Parameter(name = "id", description = "交易订单编号")
     @PreAuthorize("@ss.hasPermission('trade:order:pick-up')")
     public CommonResult<Boolean> pickUpOrderById(@RequestParam("id") Long id) {
+        validateManagedOrder(tradeOrderQueryService.getOrder(id));
         tradeOrderUpdateService.pickUpOrderByAdmin(getLoginUserId(), id);
         return success(true);
     }
@@ -153,6 +168,7 @@ public class TradeOrderController {
     @Parameter(name = "pickUpVerifyCode", description = "自提核销码")
     @PreAuthorize("@ss.hasPermission('trade:order:pick-up')")
     public CommonResult<Boolean> pickUpOrderByVerifyCode(@RequestParam("pickUpVerifyCode") String pickUpVerifyCode) {
+        validateManagedOrder(tradeOrderUpdateService.getByPickUpVerifyCode(pickUpVerifyCode));
         tradeOrderUpdateService.pickUpOrderByAdmin(getLoginUserId(), pickUpVerifyCode);
         return success(true);
     }
@@ -163,7 +179,29 @@ public class TradeOrderController {
     @PreAuthorize("@ss.hasPermission('trade:order:query')")
     public CommonResult<TradeOrderDetailRespVO> getByPickUpVerifyCode(@RequestParam("pickUpVerifyCode") String pickUpVerifyCode) {
         TradeOrderDO tradeOrder = tradeOrderUpdateService.getByPickUpVerifyCode(pickUpVerifyCode);
+        validateManagedOrder(tradeOrder);
         return success(TradeOrderConvert.INSTANCE.convert2(tradeOrder, null));
+    }
+
+    /**
+     * 被配置为店铺负责人的后台账号，只能查看自己店铺的数据；未绑定店铺的账号保留平台工作台权限。
+     */
+    private void applyManagedShopScope(TradeOrderPageReqVO reqVO) {
+        ProductShopRespDTO managedShop = getManagedShop();
+        if (managedShop != null) {
+            reqVO.setShopId(managedShop.getId());
+        }
+    }
+
+    private void validateManagedOrder(TradeOrderDO order) {
+        ProductShopRespDTO managedShop = getManagedShop();
+        if (managedShop != null && order != null && !Objects.equals(managedShop.getId(), order.getShopId())) {
+            throw exception(FORBIDDEN);
+        }
+    }
+
+    private ProductShopRespDTO getManagedShop() {
+        return productShopApi.getShopByManagerUserId(getLoginUserId());
     }
 
 }

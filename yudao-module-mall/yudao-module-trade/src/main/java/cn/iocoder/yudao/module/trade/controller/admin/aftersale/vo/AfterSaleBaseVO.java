@@ -37,6 +37,9 @@ public class AfterSaleBaseVO {
     @NotNull(message = "用户编号不能为空")
     private Long userId;
 
+    @Schema(description = "所属企业店铺编号；0 表示平台自营", example = "1")
+    private Long shopId;
+
     @Schema(description = "申请原因", requiredMode = Schema.RequiredMode.REQUIRED, example = "不喜欢")
     @NotNull(message = "申请原因不能为空")
     private String applyReason;

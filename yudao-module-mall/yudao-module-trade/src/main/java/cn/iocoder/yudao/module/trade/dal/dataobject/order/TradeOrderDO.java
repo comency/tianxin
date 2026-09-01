@@ -13,7 +13,9 @@ import cn.iocoder.yudao.module.trade.enums.order.TradeOrderRefundStatusEnum;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderStatusEnum;
 import cn.iocoder.yudao.module.trade.enums.order.TradeOrderTypeEnum;
 import com.baomidou.mybatisplus.annotation.KeySequence;
+import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import com.baomidou.mybatisplus.extension.handlers.Jackson3TypeHandler;
 import lombok.*;
@@ -46,7 +48,24 @@ public class TradeOrderDO extends BaseDO {
     /**
      * 订单编号，主键自增
      */
+    @TableId(type = IdType.AUTO)
     private Long id;
+    /**
+     * 履约店铺编号；0 表示平台自营
+     */
+    private Long shopId;
+    /**
+     * 下单时的店铺名称快照
+     */
+    private String shopName;
+    /**
+     * 下单时的店铺 Logo 快照
+     */
+    private String shopLogoUrl;
+    /**
+     * 商家订单处理人编号
+     */
+    private Long sellerUserId;
     /**
      * 订单流水号
      *

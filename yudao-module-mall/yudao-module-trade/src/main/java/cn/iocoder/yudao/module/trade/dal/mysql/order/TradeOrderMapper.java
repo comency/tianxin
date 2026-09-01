@@ -32,6 +32,7 @@ public interface TradeOrderMapper extends BaseMapperX<TradeOrderDO> {
         return selectPage(reqVO, new LambdaQueryWrapperX<TradeOrderDO>()
                 .likeIfPresent(TradeOrderDO::getNo, reqVO.getNo())
                 .eqIfPresent(TradeOrderDO::getUserId, reqVO.getUserId())
+                .eqIfPresent(TradeOrderDO::getShopId, reqVO.getShopId())
                 .eqIfPresent(TradeOrderDO::getDeliveryType, reqVO.getDeliveryType())
                 .inIfPresent(TradeOrderDO::getUserId, userIds)
                 .eqIfPresent(TradeOrderDO::getType, reqVO.getType())
@@ -53,6 +54,7 @@ public interface TradeOrderMapper extends BaseMapperX<TradeOrderDO> {
                 .selectSum(TradeOrderDO::getPayPrice, "price")  // 售后状态对应的支付金额
                 .likeIfPresent(TradeOrderDO::getNo, reqVO.getNo())
                 .eqIfPresent(TradeOrderDO::getUserId, reqVO.getUserId())
+                .eqIfPresent(TradeOrderDO::getShopId, reqVO.getShopId())
                 .eqIfPresent(TradeOrderDO::getDeliveryType, reqVO.getDeliveryType())
                 .inIfPresent(TradeOrderDO::getUserId, userIds)
                 .eqIfPresent(TradeOrderDO::getType, reqVO.getType())

@@ -177,6 +177,7 @@ public class AfterSaleServiceImpl implements AfterSaleService {
         // 标记是售中还是售后
         TradeOrderDO order = tradeOrderQueryService.getOrder(orderItem.getUserId(), orderItem.getOrderId());
         afterSale.setOrderNo(order.getNo()); // 记录 orderNo 订单流水，方便后续检索
+        afterSale.setShopId(order.getShopId()); // 固化售后责任店铺，避免负责人调整影响历史售后归属
         afterSale.setType(TradeOrderStatusEnum.isCompleted(order.getStatus())
                 ? AfterSaleTypeEnum.AFTER_SALE.getType() : AfterSaleTypeEnum.IN_SALE.getType());
         tradeAfterSaleMapper.insert(afterSale);
@@ -203,7 +204,8 @@ public class AfterSaleServiceImpl implements AfterSaleService {
         Integer newStatus = afterSale.getWay().equals(AfterSaleWayEnum.REFUND.getWay()) ?
                 AfterSaleStatusEnum.WAIT_REFUND.getStatus() : AfterSaleStatusEnum.SELLER_AGREE.getStatus();
         updateAfterSaleStatus(afterSale.getId(), AfterSaleStatusEnum.APPLY.getStatus(), new AfterSaleDO()
-                .setStatus(newStatus).setAuditUserId(userId).setAuditTime(LocalDateTime.now()));
+                .setStatus(newStatus).setAuditUserId(userId).setAuditTime(LocalDateTime.now())
+                .setHandlerUserId(userId));
 
         // 记录售后日志
         AfterSaleLogUtils.setAfterSaleInfo(afterSale.getId(), afterSale.getStatus(), newStatus);
@@ -220,7 +222,8 @@ public class AfterSaleServiceImpl implements AfterSaleService {
         Integer newStatus = AfterSaleStatusEnum.SELLER_DISAGREE.getStatus();
         updateAfterSaleStatus(afterSale.getId(), AfterSaleStatusEnum.APPLY.getStatus(), new AfterSaleDO()
                 .setStatus(newStatus).setAuditUserId(userId).setAuditTime(LocalDateTime.now())
-                .setAuditReason(auditReqVO.getAuditReason()));
+                .setAuditReason(auditReqVO.getAuditReason()).setHandlerUserId(userId)
+                .setHandleReason(auditReqVO.getAuditReason()));
 
         // 记录售后日志
         AfterSaleLogUtils.setAfterSaleInfo(afterSale.getId(), afterSale.getStatus(), newStatus);
@@ -289,7 +292,8 @@ public class AfterSaleServiceImpl implements AfterSaleService {
 
         // 更新售后单的状态
         updateAfterSaleStatus(afterSale.getId(), AfterSaleStatusEnum.BUYER_DELIVERY.getStatus(), new AfterSaleDO()
-                .setStatus(AfterSaleStatusEnum.WAIT_REFUND.getStatus()).setReceiveTime(LocalDateTime.now()));
+                .setStatus(AfterSaleStatusEnum.WAIT_REFUND.getStatus()).setReceiveTime(LocalDateTime.now())
+                .setHandlerUserId(userId));
 
         // 记录售后日志
         AfterSaleLogUtils.setAfterSaleInfo(afterSale.getId(), afterSale.getStatus(),
@@ -312,7 +316,8 @@ public class AfterSaleServiceImpl implements AfterSaleService {
         // 更新售后单的状态
         updateAfterSaleStatus(afterSale.getId(), AfterSaleStatusEnum.BUYER_DELIVERY.getStatus(), new AfterSaleDO()
                 .setStatus(AfterSaleStatusEnum.SELLER_REFUSE.getStatus()).setReceiveTime(LocalDateTime.now())
-                .setReceiveReason(refuseReqVO.getRefuseMemo()));
+                .setReceiveReason(refuseReqVO.getRefuseMemo()).setHandlerUserId(userId)
+                .setHandleReason(refuseReqVO.getRefuseMemo()));
 
         // 记录售后日志
         AfterSaleLogUtils.setAfterSaleInfo(afterSale.getId(), afterSale.getStatus(),

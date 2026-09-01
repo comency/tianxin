@@ -24,6 +24,9 @@ public class TradeOrderPageReqVO extends PageParam {
     @Schema(description = "用户编号", example = "1024")
     private Long userId;
 
+    @Schema(description = "所属企业店铺编号；0 表示平台自营", example = "1")
+    private Long shopId;
+
     @Schema(description = "用户昵称", example = "小王")
     private String userNickname;
 

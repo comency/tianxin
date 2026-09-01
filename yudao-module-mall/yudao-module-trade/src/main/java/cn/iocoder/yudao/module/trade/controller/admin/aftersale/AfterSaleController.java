@@ -7,6 +7,8 @@ import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.member.api.user.MemberUserApi;
 import cn.iocoder.yudao.module.member.api.user.dto.MemberUserRespDTO;
 import cn.iocoder.yudao.module.pay.api.notify.dto.PayRefundNotifyReqDTO;
+import cn.iocoder.yudao.module.product.api.shop.ProductShopApi;
+import cn.iocoder.yudao.module.product.api.shop.dto.ProductShopRespDTO;
 import cn.iocoder.yudao.module.trade.controller.admin.aftersale.vo.*;
 import cn.iocoder.yudao.module.trade.convert.aftersale.AfterSaleConvert;
 import cn.iocoder.yudao.module.trade.dal.dataobject.aftersale.AfterSaleDO;
@@ -32,6 +34,8 @@ import java.util.List;
 import java.util.Map;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
+import static cn.iocoder.yudao.framework.common.exception.enums.GlobalErrorCodeConstants.FORBIDDEN;
+import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
 import static cn.iocoder.yudao.framework.common.util.servlet.ServletUtils.getClientIP;
 import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
@@ -53,11 +57,14 @@ public class AfterSaleController {
     private AfterSaleLogService afterSaleLogService;
     @Resource
     private MemberUserApi memberUserApi;
+    @Resource
+    private ProductShopApi productShopApi;
 
     @GetMapping("/page")
     @Operation(summary = "获得售后订单分页")
     @PreAuthorize("@ss.hasPermission('trade:after-sale:query')")
     public CommonResult<PageResult<AfterSaleRespPageItemVO>> getAfterSalePage(@Valid AfterSalePageReqVO pageVO) {
+        applyManagedShopScope(pageVO);
         // 查询售后
         PageResult<AfterSaleDO> pageResult = afterSaleService.getAfterSalePage(pageVO);
         if (CollUtil.isEmpty(pageResult.getList())) {
@@ -80,6 +87,7 @@ public class AfterSaleController {
         if (afterSale == null) {
             return success(null);
         }
+        validateManagedAfterSale(afterSale);
 
         // 查询订单
         TradeOrderDO order = tradeOrderQueryService.getOrder(afterSale.getOrderId());
@@ -96,6 +104,7 @@ public class AfterSaleController {
     @Parameter(name = "id", description = "售后编号", required = true, example = "1")
     @PreAuthorize("@ss.hasPermission('trade:after-sale:agree')")
     public CommonResult<Boolean> agreeAfterSale(@RequestParam("id") Long id) {
+        validateManagedAfterSale(afterSaleService.getAfterSale(id));
         afterSaleService.agreeAfterSale(getLoginUserId(), id);
         return success(true);
     }
@@ -104,6 +113,7 @@ public class AfterSaleController {
     @Operation(summary = "拒绝售后")
     @PreAuthorize("@ss.hasPermission('trade:after-sale:disagree')")
     public CommonResult<Boolean> disagreeAfterSale(@RequestBody AfterSaleDisagreeReqVO confirmReqVO) {
+        validateManagedAfterSale(afterSaleService.getAfterSale(confirmReqVO.getId()));
         afterSaleService.disagreeAfterSale(getLoginUserId(), confirmReqVO);
         return success(true);
     }
@@ -113,6 +123,7 @@ public class AfterSaleController {
     @Parameter(name = "id", description = "售后编号", required = true, example = "1")
     @PreAuthorize("@ss.hasPermission('trade:after-sale:receive')")
     public CommonResult<Boolean> receiveAfterSale(@RequestParam("id") Long id) {
+        validateManagedAfterSale(afterSaleService.getAfterSale(id));
         afterSaleService.receiveAfterSale(getLoginUserId(), id);
         return success(true);
     }
@@ -122,6 +133,7 @@ public class AfterSaleController {
     @Parameter(name = "id", description = "售后编号", required = true, example = "1")
     @PreAuthorize("@ss.hasPermission('trade:after-sale:receive')")
     public CommonResult<Boolean> refuseAfterSale(AfterSaleRefuseReqVO refuseReqVO) {
+        validateManagedAfterSale(afterSaleService.getAfterSale(refuseReqVO.getId()));
         afterSaleService.refuseAfterSale(getLoginUserId(), refuseReqVO);
         return success(true);
     }
@@ -131,6 +143,7 @@ public class AfterSaleController {
     @Parameter(name = "id", description = "售后编号", required = true, example = "1")
     @PreAuthorize("@ss.hasPermission('trade:after-sale:refund')")
     public CommonResult<Boolean> refundAfterSale(@RequestParam("id") Long id) {
+        validateManagedAfterSale(afterSaleService.getAfterSale(id));
         afterSaleService.refundAfterSale(getLoginUserId(), getClientIP(), id);
         return success(true);
     }
@@ -150,6 +163,24 @@ public class AfterSaleController {
                     notifyReqDTO.getPayRefundId());
         }
         return success(true);
+    }
+
+    private void applyManagedShopScope(AfterSalePageReqVO reqVO) {
+        ProductShopRespDTO managedShop = getManagedShop();
+        if (managedShop != null) {
+            reqVO.setShopId(managedShop.getId());
+        }
+    }
+
+    private void validateManagedAfterSale(AfterSaleDO afterSale) {
+        ProductShopRespDTO managedShop = getManagedShop();
+        if (managedShop != null && afterSale != null && !managedShop.getId().equals(afterSale.getShopId())) {
+            throw exception(FORBIDDEN);
+        }
+    }
+
+    private ProductShopRespDTO getManagedShop() {
+        return productShopApi.getShopByManagerUserId(getLoginUserId());
     }
 
 }
