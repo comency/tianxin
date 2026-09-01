@@ -8,6 +8,7 @@ export interface ShopVO {
   logoUrl?: string
   contactName?: string
   contactMobile?: string
+  managerUserId?: number
   introduction?: string
   status: number
   createTime?: Date
@@ -31,4 +32,9 @@ export const getShop = (id: number) => {
 
 export const getShopList = () => {
   return request.get({ url: '/product/shop/list' })
+}
+
+/** 获得当前后台账号负责的企业店铺；平台账号未绑定时返回空 */
+export const getMyManagedShop = () => {
+  return request.get({ url: '/product/shop/my' })
 }

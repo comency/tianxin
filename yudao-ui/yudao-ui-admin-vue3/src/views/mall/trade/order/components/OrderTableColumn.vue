@@ -44,6 +44,7 @@
               style="background-color: var(--app-content-bg-color)"
             >
               <span class="mr-20px">订单号：{{ scope.row.no }} </span>
+              <span class="mr-20px">店铺：{{ scope.row.shopName || '平台自营' }}</span>
               <span class="mr-20px">下单时间：{{ formatDate(scope.row.createTime) }}</span>
               <span>订单来源：</span>
               <dict-tag :type="DICT_TYPE.TERMINAL" :value="scope.row.terminal" class="mr-20px" />

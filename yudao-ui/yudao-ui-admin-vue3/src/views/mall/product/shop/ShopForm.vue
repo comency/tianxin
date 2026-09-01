@@ -1,6 +1,12 @@
 <template>
   <Dialog :title="dialogTitle" v-model="dialogVisible">
-    <el-form ref="formRef" :model="formData" :rules="formRules" label-width="100px" v-loading="formLoading">
+    <el-form
+      ref="formRef"
+      :model="formData"
+      :rules="formRules"
+      label-width="100px"
+      v-loading="formLoading"
+    >
       <el-form-item label="企业编号" prop="enterpriseId">
         <el-input-number v-model="formData.enterpriseId" :min="1" class="!w-240px" />
       </el-form-item>
@@ -16,9 +22,24 @@
       <el-form-item label="联系电话">
         <el-input v-model="formData.contactMobile" placeholder="请输入联系电话" />
       </el-form-item>
+      <el-form-item label="店铺负责人">
+        <UserSelectV2
+          v-model="formData.managerUserId"
+          placeholder="请选择后台商家账号"
+          class="!w-240px"
+          clearable
+        />
+        <div class="text-gray-400 text-12px mt-4px"
+          >新订单将记录该账号，后续用于商家订单和售后的权限隔离。</div
+        >
+      </el-form-item>
       <el-form-item label="店铺状态" prop="status">
         <el-radio-group v-model="formData.status">
-          <el-radio v-for="dict in getIntDictOptions(DICT_TYPE.COMMON_STATUS)" :key="dict.value" :value="dict.value">
+          <el-radio
+            v-for="dict in getIntDictOptions(DICT_TYPE.COMMON_STATUS)"
+            :key="dict.value"
+            :value="dict.value"
+          >
             {{ dict.label }}
           </el-radio>
         </el-radio-group>
@@ -38,6 +59,7 @@
 import { DICT_TYPE, getIntDictOptions } from '@/utils/dict'
 import { CommonStatusEnum } from '@/utils/constants'
 import * as ProductShopApi from '@/api/mall/product/shop'
+import UserSelectV2 from '@/views/system/user/components/UserSelectV2.vue'
 
 defineOptions({ name: 'ProductShopForm' })
 
@@ -62,6 +84,7 @@ function createDefaultFormData(): ProductShopApi.ShopVO {
     logoUrl: '',
     contactName: '',
     contactMobile: '',
+    managerUserId: undefined,
     introduction: '',
     status: CommonStatusEnum.ENABLE
   }

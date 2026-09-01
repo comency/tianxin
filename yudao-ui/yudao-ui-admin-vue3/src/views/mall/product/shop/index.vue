@@ -1,7 +1,12 @@
 <template>
   <ContentWrap>
     <div class="mb-15px">
-      <el-button type="primary" plain @click="openForm('create')" v-hasPermi="['product:shop:create']">
+      <el-button
+        type="primary"
+        plain
+        @click="openForm('create')"
+        v-hasPermi="['product:shop:create']"
+      >
         <Icon icon="ep:plus" class="mr-5px" /> 新增企业店铺
       </el-button>
       <el-button @click="getList"><Icon icon="ep:refresh" class="mr-5px" /> 刷新</el-button>
@@ -17,18 +22,37 @@
       </el-table-column>
       <el-table-column label="联系人" prop="contactName" width="110" />
       <el-table-column label="联系电话" prop="contactMobile" width="130" />
+      <el-table-column label="负责人账号" prop="managerUserId" width="120">
+        <template #default="scope">{{ scope.row.managerUserId || '-' }}</template>
+      </el-table-column>
       <el-table-column label="状态" align="center" prop="status" width="90">
         <template #default="scope">
           <dict-tag :type="DICT_TYPE.COMMON_STATUS" :value="scope.row.status" />
         </template>
       </el-table-column>
-      <el-table-column label="创建时间" align="center" prop="createTime" width="180" :formatter="dateFormatter" />
+      <el-table-column
+        label="创建时间"
+        align="center"
+        prop="createTime"
+        width="180"
+        :formatter="dateFormatter"
+      />
       <el-table-column label="操作" align="center" width="150">
         <template #default="scope">
-          <el-button link type="primary" @click="openForm('update', scope.row.id)" v-hasPermi="['product:shop:update']">
+          <el-button
+            link
+            type="primary"
+            @click="openForm('update', scope.row.id)"
+            v-hasPermi="['product:shop:update']"
+          >
             编辑
           </el-button>
-          <el-button link type="danger" @click="handleDelete(scope.row.id)" v-hasPermi="['product:shop:delete']">
+          <el-button
+            link
+            type="danger"
+            @click="handleDelete(scope.row.id)"
+            v-hasPermi="['product:shop:delete']"
+          >
             删除
           </el-button>
         </template>
